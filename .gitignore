@@ -1,6 +1,2 @@
-.idea
-snapshots
-zig-cache
-.zig-cache
-zig-out
-*.swp
+/.zig-cache
+/zig-out

@@ -16,17 +16,16 @@ pub fn build(b: *std.Build) !void {
 
     const back_to_build: ?enums.Backend = b.option(enums.Backend, "backend", "Backend to build");
 
-    const test_step = b.step("test", "Test the dvui codebase");
-    const check_step = b.step("check", "Check that the dvui codebase compiles");
+    const test_step = b.step("test", "Test the rui codebase");
+    const check_step = b.step("check", "Check that the rui codebase compiles");
 
-    // Setting this to false may fix linking errors: https://github.com/david-vanderson/dvui/issues/269
+    // Setting this to false may fix linking errors
     const use_lld = b.option(bool, "use-lld", "The value of the use_lld executable option");
     const test_filters = b.option([]const []const u8, "test-filter", "Skip tests that do not match any filter") orelse &[0][]const u8{};
 
     const build_options = b.addOptions();
-    build_options.addOption(?[]const u8, "doc_image_dir", b.option([]const u8, "doc-image-dir", "Directory for documentation images"));
 
-    const dvui_opts = DvuiModuleOptions{
+    const rui_opts = RuiModuleOptions{
         .b = b,
         .target = target,
         .optimize = optimize,
@@ -39,218 +38,15 @@ pub fn build(b: *std.Build) !void {
 
     if (back_to_build == .custom) {
         // For export to users who are bringing their own backend.  Use in your build.zig:
-        // const dvui_mod = dvui_dep.module("dvui");
-        // @import("dvui").linkBackend(dvui_mod, your_backend_module);
-        const dvui_mod = addDvuiModule("dvui", dvui_opts);
-        dvui_opts.addChecksAndTests(dvui_mod, "dvui");
-    }
-
-    // Deprecated modules
-    if (back_to_build == null or back_to_build == .sdl) {
-        // The sdl backend name is deprecated. This is here to provide a useful error during transition
-        const files = b.addWriteFiles();
-        const source_path = files.add("sdl-deprecated.zig",
-            \\comptime { @compileError("The module 'dvui_sdl' is deprecated. Use either 'dvui_sdl2' or 'dvui_sdl3'"); }
-        );
-        _ = b.addModule("sdl", .{ .root_source_file = source_path });
-        _ = b.addModule("dvui_sdl", .{ .root_source_file = source_path });
-
-        if (back_to_build == .sdl) {
-            const deprecation_message = b.addFail("Backend 'sdl' is deprecated. Use either 'sdl2' or 'sdl3'");
-            b.getInstallStep().dependOn(&deprecation_message.step);
-        }
-    }
-
-    // Testing
-    if (back_to_build == null or back_to_build == .testing) {
-        const test_dvui_and_app = back_to_build == .testing;
-
-        const testing_mod = b.addModule("testing", .{
-            .root_source_file = b.path("src/backends/testing.zig"),
-            .target = target,
-            .optimize = optimize,
-        });
-        dvui_opts.addChecksAndTests(testing_mod, "testing-backend");
-
-        const dvui_testing = addDvuiModule("dvui_testing", dvui_opts);
-        if (test_dvui_and_app) {
-            dvui_opts.addChecksAndTests(dvui_testing, "dvui_testing");
-        }
-
-        linkBackend(dvui_testing, testing_mod);
-        addExample("testing-app", b.path("examples/app.zig"), dvui_testing, test_dvui_and_app, dvui_opts);
-    }
-
-    // SDL2
-    if (back_to_build == null or back_to_build == .sdl2) {
-        const test_dvui_and_app = back_to_build == .sdl2;
-
-        const sdl_mod = b.addModule("sdl2", .{
-            .root_source_file = b.path("src/backends/sdl.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        });
-        dvui_opts.addChecksAndTests(sdl_mod, "sdl2-backend");
-
-        var sdl_options = b.addOptions();
-
-        if (b.systemIntegrationOption("sdl2", .{})) {
-            // SDL2 from system
-            sdl_options.addOption(std.SemanticVersion, "version", .{ .major = 2, .minor = 0, .patch = 0 });
-            sdl_mod.linkSystemLibrary("SDL2", .{});
-        } else {
-            // SDL2 compiled from source
-            sdl_options.addOption(std.SemanticVersion, "version", .{ .major = 2, .minor = 0, .patch = 0 });
-            if (target.result.os.tag == .linux) {
-                const sdl_dep = b.lazyDependency("sdl", .{
-                    .target = target,
-                    .optimize = optimize,
-                    // trying to compile opengles (version 1) fails on
-                    // newer linux distros like arch, because they don't
-                    // have /usr/include/gles/gl.h
-                    // https://github.com/david-vanderson/dvui/issues/131
-                    .render_driver_ogl_es = false,
-                });
-                if (sdl_dep) |sd| {
-                    sdl_mod.linkLibrary(sd.artifact("SDL2"));
-                }
-            } else {
-                const sdl_dep = b.lazyDependency("sdl", .{ .target = target, .optimize = optimize });
-                if (sdl_dep) |sd| {
-                    sdl_mod.linkLibrary(sd.artifact("SDL2"));
-                }
-            }
-        }
-        sdl_mod.addOptions("sdl_options", sdl_options);
-
-        const dvui_sdl = addDvuiModule("dvui_sdl2", dvui_opts);
-        if (test_dvui_and_app) {
-            dvui_opts.addChecksAndTests(dvui_sdl, "dvui_sdl2");
-        }
-
-        linkBackend(dvui_sdl, sdl_mod);
-        addExample("sdl2-standalone", b.path("examples/sdl-standalone.zig"), dvui_sdl, true, dvui_opts);
-        addExample("sdl2-ontop", b.path("examples/sdl-ontop.zig"), dvui_sdl, true, dvui_opts);
-        addExample("sdl2-app", b.path("examples/app.zig"), dvui_sdl, test_dvui_and_app, dvui_opts);
-    }
-
-    // SDL3
-    if (back_to_build == null or back_to_build == .sdl3) {
-        // if we are building all the backends, here's where we do dvui tests
-        const test_dvui_and_app = true;
-
-        const sdl_mod = b.addModule("sdl3", .{
-            .root_source_file = b.path("src/backends/sdl.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        });
-        dvui_opts.addChecksAndTests(sdl_mod, "sdl3-backend");
-
-        var sdl_options = b.addOptions();
-
-        if (b.systemIntegrationOption("sdl3", .{})) {
-            // SDL3 from system
-            sdl_options.addOption(std.SemanticVersion, "version", .{ .major = 3, .minor = 0, .patch = 0 });
-            sdl_mod.linkSystemLibrary("SDL3", .{});
-        } else {
-            // SDL3 compiled from source
-            sdl_options.addOption(std.SemanticVersion, "version", .{ .major = 3, .minor = 0, .patch = 0 });
-            if (b.lazyDependency("sdl3", .{
-                .target = target,
-                .optimize = optimize,
-            })) |sdl3| {
-                sdl_mod.linkLibrary(sdl3.artifact("SDL3"));
-            }
-        }
-        sdl_mod.addOptions("sdl_options", sdl_options);
-
-        const dvui_sdl = addDvuiModule("dvui_sdl3", dvui_opts);
-        if (test_dvui_and_app) {
-            dvui_opts.addChecksAndTests(dvui_sdl, "dvui_sdl3");
-        }
-
-        linkBackend(dvui_sdl, sdl_mod);
-        addExample("sdl3-standalone", b.path("examples/sdl-standalone.zig"), dvui_sdl, true, dvui_opts);
-        addExample("sdl3-ontop", b.path("examples/sdl-ontop.zig"), dvui_sdl, true, dvui_opts);
-        addExample("sdl3-app", b.path("examples/app.zig"), dvui_sdl, test_dvui_and_app, dvui_opts);
-    }
-
-    // Raylib
-    if (back_to_build == null or back_to_build == .raylib) {
-        const test_dvui_and_app = back_to_build == .raylib;
-
-        const linux_display_backend: LinuxDisplayBackend = b.option(LinuxDisplayBackend, "linux_display_backend", "If using raylib, which linux display?") orelse blk: {
-            _ = std.process.getEnvVarOwned(b.allocator, "WAYLAND_DISPLAY") catch |err| switch (err) {
-                error.EnvironmentVariableNotFound => break :blk .X11,
-                else => @panic("Unknown error checking for WAYLAND_DISPLAY environment variable"),
-            };
-
-            _ = std.process.getEnvVarOwned(b.allocator, "DISPLAY") catch |err| switch (err) {
-                error.EnvironmentVariableNotFound => break :blk .Wayland,
-                else => @panic("Unknown error checking for DISPLAY environment variable"),
-            };
-
-            break :blk .Both;
-        };
-
-        const raylib_mod = b.addModule("raylib", .{
-            .root_source_file = b.path("src/backends/raylib.zig"),
-            .target = target,
-            .optimize = optimize,
-            .link_libc = true,
-        });
-        dvui_opts.addChecksAndTests(raylib_mod, "raylib-backend");
-
-        const maybe_ray = b.lazyDependency(
-            "raylib",
-            .{
-                .target = target,
-                .optimize = optimize,
-                .linux_display_backend = linux_display_backend,
-            },
-        );
-        if (maybe_ray) |ray| {
-            raylib_mod.linkLibrary(ray.artifact("raylib"));
-            // This seems wonky to me, but is copied from raylib's src/build.zig
-            if (b.lazyDependency("raygui", .{})) |raygui_dep| {
-                if (b.lazyImport(@This(), "raylib")) |_| {
-                    // we want to write this:
-                    //raylib_build.addRaygui(b, ray.artifact("raylib"), raygui_dep);
-                    // but that causes a second invocation of the raylib dependency but without our linux_display_backend
-                    // so it defaults to .Both which causes an error if there is no wayland-scanner
-
-                    const raylib = ray.artifact("raylib");
-                    var gen_step = b.addWriteFiles();
-                    raylib.step.dependOn(&gen_step.step);
-
-                    const raygui_c_path = gen_step.add("raygui.c", "#define RAYGUI_IMPLEMENTATION\n#include \"raygui.h\"\n");
-                    raylib.addCSourceFile(.{ .file = raygui_c_path });
-                    raylib.addIncludePath(raygui_dep.path("src"));
-                    raylib.addIncludePath(ray.path("src"));
-
-                    raylib.installHeader(raygui_dep.path("src/raygui.h"), "raygui.h");
-                }
-            }
-        }
-
-        var dvui_opts_raylib = dvui_opts;
-        dvui_opts_raylib.add_stb_image = false;
-        const dvui_raylib = addDvuiModule("dvui_raylib", dvui_opts_raylib);
-        if (test_dvui_and_app) {
-            dvui_opts_raylib.addChecksAndTests(dvui_raylib, "dvui_raylib");
-        }
-
-        linkBackend(dvui_raylib, raylib_mod);
-        addExample("raylib-standalone", b.path("examples/raylib-standalone.zig"), dvui_raylib, true, dvui_opts_raylib);
-        addExample("raylib-ontop", b.path("examples/raylib-ontop.zig"), dvui_raylib, true, dvui_opts_raylib);
-        addExample("raylib-app", b.path("examples/app.zig"), dvui_raylib, test_dvui_and_app, dvui_opts_raylib);
+        // const rui_mod = rui_dep.module("rui");
+        // @import("rui").linkBackend(rui_mod, your_backend_module);
+        const rui_mod = addRuiModule("rui", rui_opts);
+        rui_opts.addChecksAndTests(rui_mod, "rui");
     }
 
     // Dx11
     if (back_to_build == null or back_to_build == .dx11) {
-        const test_dvui_and_app = back_to_build == .dx11;
+        const test_rui_and_app = back_to_build == .dx11;
 
         if (target.result.os.tag == .windows) {
             const dx11_mod = b.addModule("dx11", .{
@@ -259,32 +55,29 @@ pub fn build(b: *std.Build) !void {
                 .optimize = optimize,
                 .link_libc = true,
             });
-            dvui_opts.addChecksAndTests(dx11_mod, "dx11-backend");
+            rui_opts.addChecksAndTests(dx11_mod, "dx11-backend");
 
             if (b.lazyDependency("win32", .{})) |zigwin32| {
                 dx11_mod.addImport("win32", zigwin32.module("win32"));
             }
 
-            const dvui_dx11 = addDvuiModule("dvui_dx11", dvui_opts);
-            if (test_dvui_and_app) {
-                dvui_opts.addChecksAndTests(dvui_dx11, "dvui_dx11");
+            const rui_dx11 = addRuiModule("rui_dx11", rui_opts);
+            if (test_rui_and_app) {
+                rui_opts.addChecksAndTests(rui_dx11, "rui_dx11");
             }
 
-            linkBackend(dvui_dx11, dx11_mod);
-            addExample("dx11-standalone", b.path("examples/dx11-standalone.zig"), dvui_dx11, true, dvui_opts);
-            addExample("dx11-ontop", b.path("examples/dx11-ontop.zig"), dvui_dx11, true, dvui_opts);
-            addExample("dx11-app", b.path("examples/app.zig"), dvui_dx11, test_dvui_and_app, dvui_opts);
+            linkBackend(rui_dx11, dx11_mod);
         }
     }
 
     // Web
     if (back_to_build == null or back_to_build == .web) {
-        const test_dvui_and_app = back_to_build == .web;
+        const test_rui_and_app = back_to_build == .web;
 
         const export_symbol_names = &[_][]const u8{
-            "dvui_init",
-            "dvui_deinit",
-            "dvui_update",
+            "rui_init",
+            "rui_deinit",
+            "rui_update",
             "add_event",
             "arena_u8",
             "gpa_u8",
@@ -298,84 +91,25 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
         web_mod.export_symbol_names = export_symbol_names;
-        dvui_opts.addChecksAndTests(web_mod, "web-backend");
+
+        if (test_rui_and_app) {
+            rui_opts.addChecksAndTests(web_mod, "web-backend");
+        }
 
         // NOTE: exported module uses the standard target so it can be overridden by users
-        const dvui_web = addDvuiModule("dvui_web", dvui_opts);
-        // don't add tests here, we test the web backend below in dvui_web_wasm
+        const rui_web = addRuiModule("rui_web", rui_opts);
+        // don't add tests here, we test the web backend below in rui_web_wasm
 
-        linkBackend(dvui_web, web_mod);
-
-        // Examples, must be compiled for wasm32
-        {
-            const wasm_dvui_opts = DvuiModuleOptions{
-                .b = b,
-                .target = b.resolveTargetQuery(.{
-                    .cpu_arch = .wasm32,
-                    .os_tag = .freestanding,
-                }),
-                .optimize = optimize,
-                .check_step = check_step,
-                .build_options = build_options,
-                .test_filters = test_filters,
-            };
-
-            const web_mod_wasm = b.createModule(.{
-                .root_source_file = b.path("src/backends/web.zig"),
-            });
-            web_mod_wasm.export_symbol_names = export_symbol_names;
-
-            const dvui_web_wasm = addDvuiModule("dvui_web_wasm", wasm_dvui_opts);
-            if (test_dvui_and_app) {
-                wasm_dvui_opts.addChecksAndTests(dvui_web_wasm, "dvui_web_wasm");
-            }
-            linkBackend(dvui_web_wasm, web_mod_wasm);
-            addWebExample("web-test", b.path("examples/web-test.zig"), dvui_web_wasm, wasm_dvui_opts);
-            addWebExample("web-app", b.path("examples/app.zig"), dvui_web_wasm, wasm_dvui_opts);
-        }
-    }
-
-    // Docs
-    {
-        const docs_step = b.step("docs", "Build documentation");
-        const docs = b.addLibrary(.{ .name = "dvui", .root_module = b.createModule(.{
-            .root_source_file = b.path("src/dvui.zig"),
-            .target = target,
-        }) });
-
-        const install_docs = b.addInstallDirectory(.{
-            .source_dir = docs.getEmittedDocs(),
-            .install_dir = .prefix,
-            .install_subdir = "docs",
-            // Seems a bit drastic but by default only index.html is installed
-            // and I override it below. Maybe there is a cleaner way ?
-            .exclude_extensions = &.{".html"},
-        });
-        docs_step.dependOn(&install_docs.step);
-
-        b.getInstallStep().dependOn(docs_step);
-
-        // Use customized index.html
-        const add_doc_logo = b.addExecutable(.{
-            .name = "addDocLogo",
-            .root_source_file = b.path("docs/add_doc_logo.zig"),
-            .target = b.graph.host,
-        });
-        const run_add_logo = b.addRunArtifact(add_doc_logo);
-        run_add_logo.addFileArg(b.path("docs/index.html"));
-        run_add_logo.addFileArg(b.path("docs/favicon.svg"));
-        run_add_logo.addFileArg(b.path("docs/logo.svg"));
-        const indexhtml_file = run_add_logo.captureStdOut();
-        docs_step.dependOn(&b.addInstallFileWithDir(indexhtml_file, .prefix, "docs/index.html").step);
+        linkBackend(rui_web, web_mod);
     }
 }
 
-pub fn linkBackend(dvui_mod: *std.Build.Module, backend_mod: *std.Build.Module) void {
-    backend_mod.addImport("dvui", dvui_mod);
-    dvui_mod.addImport("backend", backend_mod);
+pub fn linkBackend(rui_mod: *std.Build.Module, backend_mod: *std.Build.Module) void {
+    backend_mod.addImport("rui", rui_mod);
+    rui_mod.addImport("backend", backend_mod);
 }
 
-const DvuiModuleOptions = struct {
+const RuiModuleOptions = struct {
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -398,31 +132,31 @@ const DvuiModuleOptions = struct {
     }
 };
 
-fn addDvuiModule(
+fn addRuiModule(
     comptime name: []const u8,
-    opts: DvuiModuleOptions,
+    opts: RuiModuleOptions,
 ) *std.Build.Module {
     const b = opts.b;
     const target = opts.target;
     const optimize = opts.optimize;
 
-    const dvui_mod = b.addModule(name, .{
-        .root_source_file = b.path("src/dvui.zig"),
+    const rui_mod = b.addModule(name, .{
+        .root_source_file = b.path("src/rui.zig"),
         .target = target,
         .optimize = optimize,
     });
-    dvui_mod.addOptions("build_options", opts.build_options);
+    rui_mod.addOptions("build_options", opts.build_options);
 
     if (target.result.os.tag == .windows) {
         // tinyfiledialogs needs this
-        dvui_mod.linkSystemLibrary("comdlg32", .{});
-        dvui_mod.linkSystemLibrary("ole32", .{});
+        rui_mod.linkSystemLibrary("comdlg32", .{});
+        rui_mod.linkSystemLibrary("ole32", .{});
     }
 
-    dvui_mod.addIncludePath(b.path("src/stb"));
+    rui_mod.addIncludePath(b.path("src/stb"));
 
     if (target.result.cpu.arch == .wasm32) {
-        dvui_mod.addCSourceFiles(.{
+        rui_mod.addCSourceFiles(.{
             .files = &.{
                 "src/stb/stb_image_impl.c",
                 "src/stb/stb_image_write_impl.c",
@@ -432,140 +166,28 @@ fn addDvuiModule(
         });
     } else {
         if (opts.add_stb_image) {
-            dvui_mod.addCSourceFiles(.{ .files = &.{
+            rui_mod.addCSourceFiles(.{ .files = &.{
                 "src/stb/stb_image_impl.c",
                 "src/stb/stb_image_write_impl.c",
             } });
         }
-        dvui_mod.addCSourceFiles(.{ .files = &.{"src/stb/stb_truetype_impl.c"} });
+        rui_mod.addCSourceFiles(.{ .files = &.{"src/stb/stb_truetype_impl.c"} });
 
-        dvui_mod.addIncludePath(b.path("src/tfd"));
-        dvui_mod.addCSourceFiles(.{ .files = &.{"src/tfd/tinyfiledialogs.c"} });
+        rui_mod.addIncludePath(b.path("src/tfd"));
+        rui_mod.addCSourceFiles(.{ .files = &.{"src/tfd/tinyfiledialogs.c"} });
 
         if (b.systemIntegrationOption("freetype", .{})) {
-            dvui_mod.linkSystemLibrary("freetype2", .{});
+            rui_mod.linkSystemLibrary("freetype2", .{});
         } else {
             const freetype_dep = b.lazyDependency("freetype", .{
                 .target = target,
                 .optimize = optimize,
             });
             if (freetype_dep) |fd| {
-                dvui_mod.linkLibrary(fd.artifact("freetype"));
+                rui_mod.linkLibrary(fd.artifact("freetype"));
             }
         }
     }
 
-    return dvui_mod;
-}
-
-fn addExample(
-    comptime name: []const u8,
-    file: std.Build.LazyPath,
-    dvui_mod: *std.Build.Module,
-    add_tests: bool,
-    opts: DvuiModuleOptions,
-) void {
-    const b = opts.b;
-
-    const mod = b.createModule(.{
-        .root_source_file = file,
-        .target = opts.target,
-        .optimize = opts.optimize,
-    });
-    mod.addImport("dvui", dvui_mod);
-
-    const exe = b.addExecutable(.{ .name = name, .root_module = mod, .use_lld = opts.use_lld });
-
-    if (opts.check_step) |step| {
-        const exe_check = b.addExecutable(.{ .name = name, .root_module = mod, .use_lld = opts.use_lld });
-        step.dependOn(&exe_check.step);
-    }
-
-    if (opts.target.result.os.tag == .windows) {
-        exe.win32_manifest = b.path("./src/main.manifest");
-        exe.subsystem = .Windows;
-        // TODO: This may just be only used for directx
-        if (b.lazyDependency("win32", .{})) |zigwin32| {
-            mod.addImport("win32", zigwin32.module("win32"));
-        }
-    }
-
-    if (add_tests) {
-        if (opts.check_step) |step| {
-            const tests = b.addTest(.{ .root_module = mod, .name = name, .filters = opts.test_filters });
-            step.dependOn(&tests.step);
-        }
-        if (opts.test_step) |step| {
-            const tests = b.addTest(.{ .root_module = mod, .name = name, .filters = opts.test_filters });
-            const test_cmd = b.addRunArtifact(tests);
-            const example_test_step = b.step("test-" ++ name, "Test " ++ name);
-            example_test_step.dependOn(&test_cmd.step);
-            step.dependOn(&test_cmd.step);
-        }
-    }
-
-    const compile_step = b.step("compile-" ++ name, "Compile " ++ name);
-    compile_step.dependOn(&b.addInstallArtifact(exe, .{}).step);
-    b.getInstallStep().dependOn(compile_step);
-
-    const run_cmd = b.addRunArtifact(exe);
-    run_cmd.step.dependOn(compile_step);
-
-    const run_step = b.step(name, "Run " ++ name);
-    run_step.dependOn(&run_cmd.step);
-}
-
-fn addWebExample(
-    comptime name: []const u8,
-    file: std.Build.LazyPath,
-    dvui_mod: *std.Build.Module,
-    opts: DvuiModuleOptions,
-) void {
-    const b = opts.b;
-
-    const exeOptions: std.Build.ExecutableOptions = .{
-        .name = "web",
-        .root_source_file = file,
-        .target = opts.target,
-        .optimize = opts.optimize,
-        .link_libc = false,
-        .strip = if (opts.optimize == .ReleaseFast or opts.optimize == .ReleaseSmall) true else false,
-    };
-    const web_test = b.addExecutable(exeOptions);
-    web_test.entry = .disabled;
-    web_test.root_module.addImport("dvui", dvui_mod);
-
-    const web_test_check = b.addExecutable(exeOptions);
-    web_test_check.entry = .disabled;
-    web_test_check.root_module.addImport("dvui", dvui_mod);
-    if (opts.check_step) |step| step.dependOn(&web_test_check.step);
-
-    const install_dir: std.Build.InstallDir = .{ .custom = "bin/" ++ name };
-
-    const install_wasm = b.addInstallArtifact(web_test, .{
-        .dest_dir = .{ .override = install_dir },
-    });
-
-    const cb = b.addExecutable(.{
-        .name = "cacheBuster",
-        .root_source_file = b.path("src/cacheBuster.zig"),
-        .target = b.graph.host,
-    });
-    const cb_run = b.addRunArtifact(cb);
-    cb_run.addFileArg(b.path("src/backends/index.html"));
-    cb_run.addFileArg(b.path("src/backends/web.js"));
-    cb_run.addFileArg(web_test.getEmittedBin());
-    const output = cb_run.captureStdOut();
-
-    const install_noto = b.addInstallFileWithDir(b.path("src/fonts/NotoSansKR-Regular.ttf"), install_dir, "NotoSansKR-Regular.ttf");
-
-    const compile_step = b.step(name, "Compile " ++ name);
-    compile_step.dependOn(&b.addInstallFileWithDir(output, install_dir, "index.html").step);
-    const web_js = b.path("src/backends/web.js");
-    compile_step.dependOn(&b.addInstallFileWithDir(web_js, install_dir, "web.js").step);
-    b.addNamedLazyPath("web.js", web_js);
-    compile_step.dependOn(&install_wasm.step);
-    compile_step.dependOn(&install_noto.step);
-
-    b.getInstallStep().dependOn(compile_step);
+    return rui_mod;
 }

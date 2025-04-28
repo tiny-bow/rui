@@ -1,22 +1,3 @@
-//! [DVUI](https://david-vanderson.github.io/) is a general purpose Zig GUI toolkit.
-//!
-//! ![<Examples-demo.png>](Examples-demo.png)
-//!
-//! `dvui` module contains all the top level declarations provide all declarations required by client code. - i.e. `const dvui = @import("dvui");` is the only required import.
-//!
-//! Most UI element are expected to be created via high level function like `dvui.button`, which instantiate the corresponding lower level `dvui.ButtonWidget` for you.
-//!
-//! Custom widget can be done for simple cases my combining different high level function. For more advance usages, the user is expected to copy-paste the content of the high level functions as a starting point to combine the widgets on the lower level. More informations is available in the [project's readme](https://github.com/david-vanderson/dvui/blob/main/README.md).
-//!
-//! A complete list of available widgets can be found under `dvui.widgets`.
-//!
-//! ## Backends
-//! - [SDL](#dvui.backends.sdl)
-//! - [Web](#dvui.backends.web)
-//! - [rayLib](#dvui.backends.raylib)
-//! - [Dx11](#dvui.backends.dx11)
-//! - [Testing](#dvui.backends.testing)
-//!
 const builtin = @import("builtin");
 const std = @import("std");
 pub const backend = @import("backend");
@@ -28,7 +9,6 @@ pub const fnv = std.hash.Fnv1a_32;
 pub const App = @import("App.zig");
 pub const Backend = @import("Backend.zig");
 pub const Window = @import("Window.zig");
-pub const Examples = @import("Examples.zig");
 
 pub const Color = @import("Color.zig");
 pub const Event = @import("Event.zig");
@@ -48,7 +28,7 @@ pub const entypo = @import("icons/entypo.zig");
 
 // Note : Import widgets this way (i.e. importing them via `src/import_widgets.zig`
 // so they are nicely referenced in docs.
-// Having `pub const widgets = ` allow to refer the page with `dvui.widgets` in doccoment
+// Having `pub const widgets = ` allow to refer the page with `rui.widgets` in doccoment
 pub const widgets = @import("import_widgets.zig");
 pub const AnimateWidget = widgets.AnimateWidget;
 pub const BoxWidget = widgets.BoxWidget;
@@ -129,14 +109,14 @@ pub var ft2lib: if (useFreeType) c.FT_Library else void = undefined;
 
 pub const Error = error{ OutOfMemory, InvalidUtf8, freetypeError, tvgError, stbiError };
 
-pub const log = std.log.scoped(.dvui);
-const dvui = @This();
+pub const log = std.log.scoped(.rui);
+const rui = @This();
 
 /// Current `Window` (i.e. the one that widgets will be added to).
 /// Managed by `Window.begin` / `Window.end`
 pub var current_window: ?*Window = null;
 
-/// Get the current `dvui.Window` which corresponds to the OS window we are
+/// Get the current `rui.Window` which corresponds to the OS window we are
 /// currently adding widgets to.
 ///
 /// Only valid between `Window.begin`and `Window.end`.
@@ -175,14 +155,14 @@ pub const TagData = struct {
 pub fn tag(name: []const u8, data: TagData) void {
     var cw = currentWindow();
     const existing_tag = cw.tags.fetchPut(name, .{ .data = data }) catch |err| blk: {
-        dvui.log.err("tag() \"{s}\" got {!} for id {x}\n", .{ name, err, data.id });
+        rui.log.err("tag() \"{s}\" got {!} for id {x}\n", .{ name, err, data.id });
 
         break :blk null;
     };
 
     if (existing_tag) |kv| {
         if (kv.value.used) {
-            dvui.log.err("duplicate tag name \"{s}\" id {x} (highlighted in red); you may need to pass .{{.id_extra=<loop index>}} as widget options (see https://github.com/david-vanderson/dvui/blob/master/readme-implementation.md#widget-ids )\n", .{ name, data.id });
+            rui.log.err("duplicate tag name \"{s}\" id {x} (highlighted in red); you may need to pass .{{.id_extra=<loop index>}} as widget options\n", .{ name, data.id });
             cw.debug_widget_id = data.id;
         }
     }
@@ -208,26 +188,26 @@ pub const Alignment = struct {
     next: f32 = undefined,
 
     pub fn init() Alignment {
-        const wd = dvui.parentGet().data();
+        const wd = rui.parentGet().data();
         return .{
             .id = wd.id,
             .scale = wd.rectScale().s,
-            .max = dvui.dataGet(null, wd.id, "_max_align", f32),
+            .max = rui.dataGet(null, wd.id, "_max_align", f32),
             .next = -1_000_000,
         };
     }
 
     /// Add spacer with margin.x so they all end at the same edge.
     pub fn spacer(self: *Alignment, src: std.builtin.SourceLocation, id: u32) !void {
-        const uniqueId = dvui.parentGet().extendId(src, id);
-        var wd = try dvui.spacer(src, .{}, .{ .margin = self.margin(uniqueId), .id_extra = id });
+        const uniqueId = rui.parentGet().extendId(src, id);
+        var wd = try rui.spacer(src, .{}, .{ .margin = self.margin(uniqueId), .id_extra = id });
         self.record(uniqueId, &wd);
     }
 
     /// Get the margin needed to align this id's left edge.
     pub fn margin(self: *Alignment, id: u32) Rect {
         if (self.max) |m| {
-            if (dvui.dataGet(null, id, "_align", f32)) |a| {
+            if (rui.dataGet(null, id, "_align", f32)) |a| {
                 return .{ .x = @max(0, (m - a) / self.scale) };
             }
         }
@@ -238,12 +218,12 @@ pub const Alignment = struct {
     /// Record where this widget ended up so we can align it next frame.
     pub fn record(self: *Alignment, id: u32, wd: *WidgetData) void {
         const x = wd.rectScale().r.x;
-        dvui.dataSet(null, id, "_align", x);
+        rui.dataSet(null, id, "_align", x);
         self.next = @max(self.next, x);
     }
 
     pub fn deinit(self: *Alignment) void {
-        dvui.dataSet(null, self.id, "_max_align", self.next);
+        rui.dataSet(null, self.id, "_max_align", self.next);
         if (self.max) |m| {
             if (self.next != m) {
                 // something changed
@@ -395,7 +375,7 @@ pub fn addFont(name: []const u8, ttf_bytes: []const u8, ttf_bytes_allocator: ?st
     errdefer _ = cw.font_bytes.remove(name);
 
     // Test if we can successfully open this font
-    _ = try dvui.fontCacheGet(.{ .name = name, .size = 14 });
+    _ = try rui.fontCacheGet(.{ .name = name, .size = 14 });
 }
 
 const GlyphInfo = struct {
@@ -738,7 +718,7 @@ pub fn fontCacheGet(font: Font) !*FontCacheEntry {
         if (currentWindow().font_bytes.get(font.name)) |fbe| {
             break :blk fbe.ttf_bytes;
         } else {
-            log.warn("Font \"{s}\" not in dvui database, using default", .{font.name});
+            log.warn("Font \"{s}\" not in rui database, using default", .{font.name});
             break :blk Font.default_ttf_bytes;
         }
     };
@@ -844,8 +824,8 @@ pub const TextureTarget = struct {
     height: u32,
 };
 
-/// A texture that will be held by dvui until a frame it is not used.  This is
-/// how dvui caches icon and image rasterizations.
+/// A texture that will be held by rui until a frame it is not used.  This is
+/// how rui caches icon and image rasterizations.
 pub const TextureCacheEntry = struct {
     texture: Texture,
     used: bool = true,
@@ -913,7 +893,7 @@ pub fn iconTexture(name: []const u8, tvg_bytes: []const u8, height: u32) !Textur
 }
 
 /// Represents a deferred call to one of the render functions.  This is how
-/// dvui defers rendering of floating windows so they render on top of widgets
+/// rui defers rendering of floating windows so they render on top of widgets
 /// that run later in the frame.
 pub const RenderCommand = struct {
     clip: Rect,
@@ -1154,7 +1134,7 @@ pub fn pathFillConvex(path: []const Point, color: Color) !void {
         return;
     }
 
-    if (dvui.clipGet().empty()) {
+    if (rui.clipGet().empty()) {
         return;
     }
 
@@ -1290,7 +1270,7 @@ pub fn pathStroke(path: []const Point, thickness: f32, color: Color, opts: PathS
 }
 
 pub fn pathStrokeRaw(path: []const Point, thickness: f32, color: Color, closed_in: bool, endcap_style: EndCapStyle) !void {
-    if (dvui.clipGet().empty()) {
+    if (rui.clipGet().empty()) {
         return;
     }
 
@@ -1895,7 +1875,7 @@ pub fn snapToPixels() bool {
 
 /// Requests another frame to be shown.
 ///
-/// This only matters if you are using dvui to manage the framerate (by calling
+/// This only matters if you are using rui to manage the framerate (by calling
 /// `Window.waitTime` and using the return value to wait with event
 /// interruption - for example `sdl_backend.waitEventTimeout` at the end of each
 /// frame).
@@ -1906,7 +1886,7 @@ pub fn snapToPixels() bool {
 /// Can be called from any thread.
 ///
 /// If called from non-GUI thread or outside `Window.begin`/`Window.end`, you must
-/// pass a pointer to the Window you want to refresh.  In that case dvui will
+/// pass a pointer to the Window you want to refresh.  In that case rui will
 /// go through the backend because the gui thread might be waiting.
 pub fn refresh(win: ?*Window, src: std.builtin.SourceLocation, id: ?u32) void {
     if (win) |w| {
@@ -1964,7 +1944,7 @@ pub fn FPS() f32 {
 /// Get the Widget that would be the parent of a new widget.
 ///
 /// ```zig
-/// dvui.parentGet().extendId(@src(), id_extra)
+/// rui.parentGet().extendId(@src(), id_extra)
 /// ```
 /// is how new widgets get their id, and can be used to make a unique id without
 /// making a widget.
@@ -2014,7 +1994,7 @@ pub fn parentReset(id: u32, w: Widget) void {
     cw.wd.parent = w;
 }
 
-/// Set if dvui should immediately render, and return the previous setting.
+/// Set if rui should immediately render, and return the previous setting.
 ///
 /// If false, the render functions defer until `Window.end`.
 ///
@@ -2116,7 +2096,7 @@ pub fn minSize(id: u32, min_size: Size) Size {
 /// See `Widget.extendId` which calls this with the widget id as start.
 ///
 /// ```zig
-/// dvui.parentGet().extendId(@src(), id_extra)
+/// rui.parentGet().extendId(@src(), id_extra)
 /// ```
 /// is how new widgets get their id, and can be used to make a unique id without
 /// making a widget.
@@ -2133,7 +2113,7 @@ pub fn hashSrc(start: ?u32, src: std.builtin.SourceLocation, id_extra: usize) u3
     return hash.final();
 }
 
-/// Make a new id by combining id with the contents of key.  This is how dvui
+/// Make a new id by combining id with the contents of key.  This is how rui
 /// tracks things in `dataGet`/`dataSet`, `animation`, and `timer`.
 pub fn hashIdKey(id: u32, key: []const u8) u32 {
     var h = fnv.init();
@@ -2170,7 +2150,7 @@ pub fn dataSetSlice(win: ?*Window, id: u32, key: []const u8, data: anytype) void
 }
 
 /// Same as `dataSetSlice`, but will copy data `num_copies` times all concatenated
-/// into a single slice.  Useful to get dvui to allocate a specific number of
+/// into a single slice.  Useful to get rui to allocate a specific number of
 /// entries that you want to fill in after.
 pub fn dataSetSliceCopies(win: ?*Window, id: u32, key: []const u8, data: anytype, num_copies: usize) void {
     const dt = @typeInfo(@TypeOf(data));
@@ -2820,17 +2800,17 @@ pub fn floatingWindow(src: std.builtin.SourceLocation, floating_opts: FloatingWi
 }
 
 pub fn windowHeader(str: []const u8, right_str: []const u8, openflag: ?*bool) !void {
-    var over = try dvui.overlay(@src(), .{ .expand = .horizontal });
+    var over = try rui.overlay(@src(), .{ .expand = .horizontal });
 
-    try dvui.labelNoFmt(@src(), str, .{ .gravity_x = 0.5, .gravity_y = 0.5, .expand = .horizontal, .font_style = .heading, .padding = .{ .x = 6, .y = 6, .w = 6, .h = 4 } });
+    try rui.labelNoFmt(@src(), str, .{ .gravity_x = 0.5, .gravity_y = 0.5, .expand = .horizontal, .font_style = .heading, .padding = .{ .x = 6, .y = 6, .w = 6, .h = 4 } });
 
     if (openflag) |of| {
-        if (try dvui.buttonIcon(@src(), "close", entypo.cross, .{}, .{ .font_style = .heading, .corner_radius = Rect.all(1000), .padding = Rect.all(2), .margin = Rect.all(2), .gravity_y = 0.5, .expand = .ratio })) {
+        if (try rui.buttonIcon(@src(), "close", entypo.cross, .{}, .{ .font_style = .heading, .corner_radius = Rect.all(1000), .padding = Rect.all(2), .margin = Rect.all(2), .gravity_y = 0.5, .expand = .ratio })) {
             of.* = false;
         }
     }
 
-    try dvui.labelNoFmt(@src(), right_str, .{ .gravity_x = 1.0 });
+    try rui.labelNoFmt(@src(), right_str, .{ .gravity_x = 1.0 });
 
     const evts = events();
     for (evts) |*e| {
@@ -2850,7 +2830,7 @@ pub fn windowHeader(str: []const u8, right_str: []const u8, openflag: ?*bool) !v
 
     over.deinit();
 
-    try dvui.separator(@src(), .{ .expand = .horizontal });
+    try rui.separator(@src(), .{ .expand = .horizontal });
 }
 
 pub const DialogDisplayFn = *const fn (u32) anyerror!void;
@@ -2955,45 +2935,45 @@ pub fn dialog(src: std.builtin.SourceLocation, user_struct: anytype, opts: Dialo
 }
 
 pub fn dialogDisplay(id: u32) !void {
-    const modal = dvui.dataGet(null, id, "_modal", bool) orelse {
+    const modal = rui.dataGet(null, id, "_modal", bool) orelse {
         log.err("dialogDisplay lost data for dialog {x}\n", .{id});
-        dvui.dialogRemove(id);
+        rui.dialogRemove(id);
         return;
     };
 
-    const title = dvui.dataGetSlice(null, id, "_title", []u8) orelse {
+    const title = rui.dataGetSlice(null, id, "_title", []u8) orelse {
         log.err("dialogDisplay lost data for dialog {x}\n", .{id});
-        dvui.dialogRemove(id);
+        rui.dialogRemove(id);
         return;
     };
 
-    const message = dvui.dataGetSlice(null, id, "_message", []u8) orelse {
+    const message = rui.dataGetSlice(null, id, "_message", []u8) orelse {
         log.err("dialogDisplay lost data for dialog {x}\n", .{id});
-        dvui.dialogRemove(id);
+        rui.dialogRemove(id);
         return;
     };
 
-    const ok_label = dvui.dataGetSlice(null, id, "_ok_label", []u8) orelse {
+    const ok_label = rui.dataGetSlice(null, id, "_ok_label", []u8) orelse {
         log.err("dialogDisplay lost data for dialog {x}\n", .{id});
-        dvui.dialogRemove(id);
+        rui.dialogRemove(id);
         return;
     };
 
-    const center_on = dvui.dataGet(null, id, "_center_on", Rect) orelse currentWindow().subwindow_currentRect;
+    const center_on = rui.dataGet(null, id, "_center_on", Rect) orelse currentWindow().subwindow_currentRect;
 
-    const cancel_label = dvui.dataGetSlice(null, id, "_cancel_label", []u8);
+    const cancel_label = rui.dataGetSlice(null, id, "_cancel_label", []u8);
 
-    const callafter = dvui.dataGet(null, id, "_callafter", DialogCallAfterFn);
+    const callafter = rui.dataGet(null, id, "_callafter", DialogCallAfterFn);
 
-    const maxSize = dvui.dataGet(null, id, "_max_size", Size);
+    const maxSize = rui.dataGet(null, id, "_max_size", Size);
 
     var win = try floatingWindow(@src(), .{ .modal = modal, .center_on = center_on, .window_avoid = .nudge }, .{ .id_extra = id, .max_size_content = maxSize });
     defer win.deinit();
 
     var header_openflag = true;
-    try dvui.windowHeader(title, "", &header_openflag);
+    try rui.windowHeader(title, "", &header_openflag);
     if (!header_openflag) {
-        dvui.dialogRemove(id);
+        rui.dialogRemove(id);
         if (callafter) |ca| {
             try ca(id, .cancel);
         }
@@ -3002,12 +2982,12 @@ pub fn dialogDisplay(id: u32) !void {
 
     {
         // Add the buttons at the bottom first, so that they are guaranteed to be shown
-        var hbox = try dvui.box(@src(), .horizontal, .{ .gravity_x = 0.5, .gravity_y = 1.0 });
+        var hbox = try rui.box(@src(), .horizontal, .{ .gravity_x = 0.5, .gravity_y = 1.0 });
         defer hbox.deinit();
 
         if (cancel_label) |cl| {
-            if (try dvui.button(@src(), cl, .{}, .{ .tab_index = 2 })) {
-                dvui.dialogRemove(id);
+            if (try rui.button(@src(), cl, .{}, .{ .tab_index = 2 })) {
+                rui.dialogRemove(id);
                 if (callafter) |ca| {
                     try ca(id, .cancel);
                 }
@@ -3015,8 +2995,8 @@ pub fn dialogDisplay(id: u32) !void {
             }
         }
 
-        if (try dvui.button(@src(), ok_label, .{}, .{ .tab_index = 1 })) {
-            dvui.dialogRemove(id);
+        if (try rui.button(@src(), ok_label, .{}, .{ .tab_index = 1 })) {
+            rui.dialogRemove(id);
             if (callafter) |ca| {
                 try ca(id, .ok);
             }
@@ -3025,8 +3005,8 @@ pub fn dialogDisplay(id: u32) !void {
     }
 
     // Now add the scroll area which will get the remaining space
-    var scroll = try dvui.scrollArea(@src(), .{}, .{ .expand = .both, .color_fill = .{ .name = .fill_window } });
-    var tl = try dvui.textLayout(@src(), .{}, .{ .background = false, .gravity_x = 0.5 });
+    var scroll = try rui.scrollArea(@src(), .{}, .{ .expand = .both, .color_fill = .{ .name = .fill_window } });
+    var tl = try rui.textLayout(@src(), .{}, .{ .background = false, .gravity_x = 0.5 });
     try tl.addText(message, .{});
     tl.deinit();
     scroll.deinit();
@@ -3050,7 +3030,7 @@ const WasmFile = struct {
     pub fn readData(self: *WasmFile, allocator: std.mem.Allocator) ![]u8 {
         std.debug.assert(wasm); // WasmFile shouldn't be used outside wasm builds
         const data = try allocator.alloc(u8, self.size);
-        dvui.backend.readFileData(self.id, self.index, data.ptr);
+        rui.backend.readFileData(self.id, self.index, data.ptr);
         return data;
     }
 };
@@ -3060,7 +3040,7 @@ const WasmFile = struct {
 /// This function does nothing in non-wasm builds
 pub fn dialogWasmFileOpen(id: u32, opts: DialogWasmFileOptions) void {
     if (!wasm) return;
-    dvui.backend.openFilePicker(id, opts.accept, false);
+    rui.backend.openFilePicker(id, opts.accept, false);
 }
 
 /// Will only return a non-null value for a single frame
@@ -3068,13 +3048,13 @@ pub fn dialogWasmFileOpen(id: u32, opts: DialogWasmFileOptions) void {
 /// This function does nothing in non-wasm builds
 pub fn wasmFileUploaded(id: u32) ?WasmFile {
     if (!wasm) return null;
-    const num_files = dvui.backend.getNumberOfFilesAvailable(id);
+    const num_files = rui.backend.getNumberOfFilesAvailable(id);
     if (num_files == 0) return null;
     if (num_files > 1) {
         log.err("Received more than one file for id {d}. Did you mean to call wasmFileUploadedMultiple?", .{id});
     }
-    const name = dvui.backend.getFileName(id, 0);
-    const size = dvui.backend.getFileSize(id, 0);
+    const name = rui.backend.getFileName(id, 0);
+    const size = rui.backend.getFileSize(id, 0);
     if (name == null or size == null) {
         log.err("Could not get file metadata. Got size: {?d} and name: {?s}", .{ size, name });
         return null;
@@ -3092,7 +3072,7 @@ pub fn wasmFileUploaded(id: u32) ?WasmFile {
 /// This function does nothing in non-wasm builds
 pub fn dialogWasmFileOpenMultiple(id: u32, opts: DialogWasmFileOptions) void {
     if (!wasm) return;
-    dvui.backend.openFilePicker(id, opts.accept, true);
+    rui.backend.openFilePicker(id, opts.accept, true);
 }
 
 /// Will only return a non-null value for a single frame
@@ -3100,16 +3080,16 @@ pub fn dialogWasmFileOpenMultiple(id: u32, opts: DialogWasmFileOptions) void {
 /// This function does nothing in non-wasm builds
 pub fn wasmFileUploadedMultiple(id: u32) ?[]WasmFile {
     if (!wasm) return null;
-    const num_files = dvui.backend.getNumberOfFilesAvailable(id);
+    const num_files = rui.backend.getNumberOfFilesAvailable(id);
     if (num_files == 0) return null;
 
-    const files = dvui.currentWindow().arena().alloc(WasmFile, num_files) catch |err| {
+    const files = rui.currentWindow().arena().alloc(WasmFile, num_files) catch |err| {
         log.err("File upload skipped, failed to allocate space for file handles: {!}", .{err});
         return null;
     };
     for (0.., files) |i, *file| {
-        const name = dvui.backend.getFileName(id, i);
-        const size = dvui.backend.getFileSize(id, i);
+        const name = rui.backend.getFileName(id, i);
+        const size = rui.backend.getFileSize(id, i);
         if (name == null or size == null) {
             log.err("Could not get file metadata for id {d} file number {d}. Got size: {?d} and name: {?s}", .{ id, i, size, name });
             return null;
@@ -3234,9 +3214,9 @@ fn dialogNativeFileInternal(comptime open: bool, comptime multiple: bool, alloc:
     var result: if (multiple) ?[][:0]const u8 else ?[:0]const u8 = null;
     const tfd_ret: [*c]const u8 = blk: {
         if (open) {
-            break :blk dvui.c.tinyfd_openFileDialog(title, path, @intCast(filter_count), filters, filter_desc, if (multiple) 1 else 0);
+            break :blk rui.c.tinyfd_openFileDialog(title, path, @intCast(filter_count), filters, filter_desc, if (multiple) 1 else 0);
         } else {
-            break :blk dvui.c.tinyfd_saveFileDialog(title, path, @intCast(filter_count), filters, filter_desc);
+            break :blk rui.c.tinyfd_saveFileDialog(title, path, @intCast(filter_count), filters, filter_desc);
         }
     };
 
@@ -3303,7 +3283,7 @@ pub fn dialogNativeFolderSelect(alloc: std.mem.Allocator, opts: DialogNativeFold
     }
 
     var result: ?[]const u8 = null;
-    const tfd_ret = dvui.c.tinyfd_selectFolderDialog(title, path);
+    const tfd_ret = rui.c.tinyfd_selectFolderDialog(title, path);
     if (tfd_ret) |r| {
         result = try alloc.dupe(u8, std.mem.sliceTo(r, 0));
     }
@@ -3360,7 +3340,7 @@ pub fn toastRemove(id: u32) void {
 }
 
 pub fn toastsFor(subwindow_id: ?u32) ?ToastIterator {
-    const cw = dvui.currentWindow();
+    const cw = rui.currentWindow();
     cw.dialog_mutex.lock();
     defer cw.dialog_mutex.unlock();
 
@@ -3426,28 +3406,28 @@ pub const ToastOptions = struct {
 /// Can be called from any thread, but if called from a non-GUI thread or
 /// outside `Window.begin`/`Window.end`, you must set `opts.window`.
 pub fn toast(src: std.builtin.SourceLocation, opts: ToastOptions) !void {
-    const id_mutex = try dvui.toastAdd(opts.window, src, opts.id_extra, opts.subwindow_id, opts.displayFn, opts.timeout);
+    const id_mutex = try rui.toastAdd(opts.window, src, opts.id_extra, opts.subwindow_id, opts.displayFn, opts.timeout);
     const id = id_mutex.id;
-    dvui.dataSetSlice(opts.window, id, "_message", opts.message);
+    rui.dataSetSlice(opts.window, id, "_message", opts.message);
     id_mutex.mutex.unlock();
 }
 
 pub fn toastDisplay(id: u32) !void {
-    const message = dvui.dataGetSlice(null, id, "_message", []u8) orelse {
+    const message = rui.dataGetSlice(null, id, "_message", []u8) orelse {
         log.err("toastDisplay lost data for toast {x}\n", .{id});
         return;
     };
 
-    var animator = try dvui.animate(@src(), .{ .kind = .alpha, .duration = 500_000 }, .{ .id_extra = id });
+    var animator = try rui.animate(@src(), .{ .kind = .alpha, .duration = 500_000 }, .{ .id_extra = id });
     defer animator.deinit();
-    try dvui.labelNoFmt(@src(), message, .{ .background = true, .corner_radius = dvui.Rect.all(1000), .padding = Rect.all(8) });
+    try rui.labelNoFmt(@src(), message, .{ .background = true, .corner_radius = rui.Rect.all(1000), .padding = Rect.all(8) });
 
-    if (dvui.timerDone(id)) {
+    if (rui.timerDone(id)) {
         animator.startEnd();
     }
 
     if (animator.end()) {
-        dvui.toastRemove(id);
+        rui.toastRemove(id);
     }
 }
 
@@ -3459,7 +3439,7 @@ pub fn animate(src: std.builtin.SourceLocation, init_opts: AnimateWidget.InitOpt
 }
 
 pub fn dropdown(src: std.builtin.SourceLocation, entries: []const []const u8, choice: *usize, opts: Options) !bool {
-    var dd = dvui.DropdownWidget.init(src, .{ .selected_index = choice.*, .label = entries[choice.*] }, opts);
+    var dd = rui.DropdownWidget.init(src, .{ .selected_index = choice.*, .label = entries[choice.*] }, opts);
     try dd.install();
 
     var ret = false;
@@ -3486,23 +3466,23 @@ pub fn suggestion(te: *TextEntryWidget, init_opts: SuggestionInitOptions) !*Sugg
     var open_sug = init_opts.opened;
 
     if (init_opts.button) {
-        if (try dvui.buttonIcon(@src(), "combobox_triangle", entypo.chevron_small_down, .{}, .{ .expand = .ratio, .margin = dvui.Rect.all(2), .gravity_x = 1.0 })) {
+        if (try rui.buttonIcon(@src(), "combobox_triangle", entypo.chevron_small_down, .{}, .{ .expand = .ratio, .margin = rui.Rect.all(2), .gravity_x = 1.0 })) {
             open_sug = true;
-            dvui.focusWidget(te.data().id, null, null);
+            rui.focusWidget(te.data().id, null, null);
         }
     }
 
     const min_width = te.textLayout.data().backgroundRect().w;
 
     var sug = try currentWindow().arena().create(SuggestionWidget);
-    sug.* = dvui.SuggestionWidget.init(@src(), .{ .rs = te.data().borderRectScale(), .text_entry_id = te.data().id }, .{ .min_size_content = .{ .w = min_width }, .padding = .{}, .border = te.data().options.borderGet() });
+    sug.* = rui.SuggestionWidget.init(@src(), .{ .rs = te.data().borderRectScale(), .text_entry_id = te.data().id }, .{ .min_size_content = .{ .w = min_width }, .padding = .{}, .border = te.data().options.borderGet() });
     try sug.install();
     if (open_sug) {
         sug.open();
     }
 
     // process events from textEntry
-    const evts = dvui.events();
+    const evts = rui.events();
     for (evts) |*e| {
         if (!te.matchEvent(e)) {
             continue;
@@ -3554,10 +3534,10 @@ pub fn suggestion(te: *TextEntryWidget, init_opts: SuggestionInitOptions) !*Sugg
 
 pub fn comboBox(src: std.builtin.SourceLocation, entries: []const []const u8, init_opts: TextEntryWidget.InitOptions, opts: Options) !*TextEntryWidget {
     var te = try currentWindow().arena().create(TextEntryWidget);
-    te.* = dvui.TextEntryWidget.init(src, init_opts, opts);
+    te.* = rui.TextEntryWidget.init(src, init_opts, opts);
     try te.install();
 
-    var sug = try dvui.suggestion(te, .{ .button = true });
+    var sug = try rui.suggestion(te, .{ .button = true });
 
     if (try sug.dropped()) {
         for (entries) |entry| {
@@ -3596,7 +3576,7 @@ pub fn expander(src: std.builtin.SourceLocation, label_str: []const u8, init_opt
     defer bc.deinit();
 
     var expanded: bool = init_opts.default_expanded;
-    if (dvui.dataGet(null, bc.wd.id, "_expand", bool)) |e| {
+    if (rui.dataGet(null, bc.wd.id, "_expand", bool)) |e| {
         expanded = e;
     }
 
@@ -3615,7 +3595,7 @@ pub fn expander(src: std.builtin.SourceLocation, label_str: []const u8, init_opt
     }
     try labelNoFmt(@src(), label_str, options.strip());
 
-    dvui.dataSet(null, bc.wd.id, "_expand", expanded);
+    rui.dataSet(null, bc.wd.id, "_expand", expanded);
 
     return expanded;
 }
@@ -3636,7 +3616,7 @@ pub fn textLayout(src: std.builtin.SourceLocation, init_opts: TextLayoutWidget.I
     try ret.install(.{});
 
     // can install corner widgets here
-    //_ = try dvui.button(@src(), "upright", .{}, .{ .gravity_x = 1.0 });
+    //_ = try rui.button(@src(), "upright", .{}, .{ .gravity_x = 1.0 });
 
     if (try ret.touchEditing()) |floating_widget| {
         defer floating_widget.deinit();
@@ -3667,9 +3647,9 @@ pub fn context(src: std.builtin.SourceLocation, init_opts: ContextWidget.InitOpt
 }
 
 pub fn tooltip(src: std.builtin.SourceLocation, init_opts: FloatingTooltipWidget.InitOptions, comptime fmt: []const u8, fmt_args: anytype, opts: Options) !void {
-    var tt: dvui.FloatingTooltipWidget = .init(src, init_opts, opts);
+    var tt: rui.FloatingTooltipWidget = .init(src, init_opts, opts);
     if (try tt.shown()) {
-        var tl2 = try dvui.textLayout(@src(), .{}, .{ .background = false });
+        var tl2 = try rui.textLayout(@src(), .{}, .{ .background = false });
         try tl2.format(fmt, fmt_args, .{});
         tl2.deinit();
     }
@@ -3803,7 +3783,7 @@ pub fn spinner(src: std.builtin.SourceLocation, opts: Options) !void {
         animation(wd.id, "_t", anim);
     }
 
-    var path: std.ArrayList(dvui.Point) = .init(dvui.currentWindow().arena());
+    var path: std.ArrayList(rui.Point) = .init(rui.currentWindow().arena());
     defer path.deinit();
 
     const full_circle = 2 * std.math.pi;
@@ -3896,14 +3876,14 @@ pub fn labelClick(src: std.builtin.SourceLocation, comptime fmt: []const u8, arg
 
     // if lw is visible, we want to be able to keyboard navigate to it
     if (lw.data().visible()) {
-        try dvui.tabIndexSet(lwid, lw.data().options.tab_index);
+        try rui.tabIndexSet(lwid, lw.data().options.tab_index);
     }
 
     // draw border and background
     try lw.install();
 
     // loop over all events this frame in order of arrival
-    for (dvui.events()) |*e| {
+    for (rui.events()) |*e| {
 
         // skip if lw would not normally process this event
         if (!lw.matchEvent(e))
@@ -3915,21 +3895,21 @@ pub fn labelClick(src: std.builtin.SourceLocation, comptime fmt: []const u8, arg
                     e.handled = true;
 
                     // focus this widget for events after this one (starting with e.num)
-                    dvui.focusWidget(lwid, null, e.num);
+                    rui.focusWidget(lwid, null, e.num);
                 } else if (me.action == .press and me.button.pointer()) {
                     e.handled = true;
-                    dvui.captureMouse(lw.data());
+                    rui.captureMouse(lw.data());
 
                     // for touch events, we want to cancel our click if a drag is started
-                    dvui.dragPreStart(me.p, .{});
+                    rui.dragPreStart(me.p, .{});
                 } else if (me.action == .release and me.button.pointer()) {
                     // mouse button was released, do we still have mouse capture?
-                    if (dvui.captured(lwid)) {
+                    if (rui.captured(lwid)) {
                         e.handled = true;
 
                         // cancel our capture
-                        dvui.captureMouse(null);
-                        dvui.dragEnd();
+                        rui.captureMouse(null);
+                        rui.dragEnd();
 
                         // if the release was within our border, the click is successful
                         if (lw.data().borderRectScale().r.contains(me.p)) {
@@ -3939,30 +3919,30 @@ pub fn labelClick(src: std.builtin.SourceLocation, comptime fmt: []const u8, arg
                             // widget, it usually means part of the GUI is
                             // changing, so the convention is to call refresh
                             // so the user doesn't have to remember
-                            dvui.refresh(null, @src(), lwid);
+                            rui.refresh(null, @src(), lwid);
                         }
                     }
                 } else if (me.action == .motion and me.button.touch()) {
-                    if (dvui.captured(lwid)) {
-                        if (dvui.dragging(me.p)) |_| {
+                    if (rui.captured(lwid)) {
+                        if (rui.dragging(me.p)) |_| {
                             // touch: if we overcame the drag threshold, then
                             // that means the person probably didn't want to
                             // touch this button, they were trying to scroll
-                            dvui.captureMouse(null);
-                            dvui.dragEnd();
+                            rui.captureMouse(null);
+                            rui.dragEnd();
                         }
                     }
                 } else if (me.action == .position) {
                     // a single .position mouse event is at the end of each
                     // frame, so this means the mouse ended above us
-                    dvui.cursorSet(.hand);
+                    rui.cursorSet(.hand);
                 }
             },
             .key => |ke| {
                 if (ke.action == .down and ke.matchBind("activate")) {
                     e.handled = true;
                     ret = true;
-                    dvui.refresh(null, @src(), lwid);
+                    rui.refresh(null, @src(), lwid);
                 }
             },
             else => {},
@@ -3979,7 +3959,7 @@ pub fn labelClick(src: std.builtin.SourceLocation, comptime fmt: []const u8, arg
     try lw.draw();
 
     // draw an accent border if we are focused
-    if (lwid == dvui.focusedWidgetId()) {
+    if (lwid == rui.focusedWidgetId()) {
         try lw.data().focusBorder();
     }
 
@@ -4054,7 +4034,7 @@ pub fn image(src: std.builtin.SourceLocation, init_opts: ImageInitOptions, opts:
         size = msc;
     } else {
         // user didn't give us one, use natural size
-        size = dvui.imageSize(init_opts.name, init_opts.bytes) catch .{ .w = 10, .h = 10 };
+        size = rui.imageSize(init_opts.name, init_opts.bytes) catch .{ .w = 10, .h = 10 };
     }
 
     var wd = WidgetData.init(src, .{}, options.override(.{ .min_size_content = size }));
@@ -4074,7 +4054,7 @@ pub fn image(src: std.builtin.SourceLocation, init_opts: ImageInitOptions, opts:
         e = init_opts.shrink orelse e;
     }
     const g = wd.options.gravityGet();
-    var rect = dvui.placeIn(cr, ms, e, g);
+    var rect = rui.placeIn(cr, ms, e, g);
     var doclip = false;
     var old_clip: Rect = undefined;
 
@@ -4096,11 +4076,11 @@ pub fn image(src: std.builtin.SourceLocation, init_opts: ImageInitOptions, opts:
 
     const rs = wd.parent.screenRectScale(rect);
     if (doclip) {
-        old_clip = dvui.clip(wd.contentRectScale().r);
+        old_clip = rui.clip(wd.contentRectScale().r);
     }
-    try dvui.renderImage(init_opts.name, init_opts.bytes, rs, wd.options.rotationGet(), .{});
+    try rui.renderImage(init_opts.name, init_opts.bytes, rs, wd.options.rotationGet(), .{});
     if (doclip) {
-        dvui.clipSet(old_clip);
+        rui.clipSet(old_clip);
     }
 
     wd.minSizeSetAndRefresh();
@@ -4250,7 +4230,7 @@ pub fn slider(src: std.builtin.SourceLocation, dir: enums.Direction, fraction: *
                     e.handled = true;
                     p = me.p;
                 } else if (me.action == .position) {
-                    dvui.cursorSet(.arrow);
+                    rui.cursorSet(.arrow);
                     hovered = true;
                 }
 
@@ -4356,7 +4336,7 @@ pub fn slider(src: std.builtin.SourceLocation, dir: enums.Direction, fraction: *
 
 pub var slider_entry_defaults: Options = .{
     .margin = Rect.all(4),
-    .corner_radius = dvui.Rect.all(2),
+    .corner_radius = rui.Rect.all(2),
     .padding = Rect.all(2),
     .color_fill = .{ .name = .fill_control },
     .background = true,
@@ -4475,7 +4455,7 @@ pub fn sliderEntry(src: std.builtin.SourceLocation, comptime label_fmt: ?[]const
         }
 
         if (b.data().id == focusedWidgetId()) {
-            dvui.wantTextInput(b.data().borderRectScale().r);
+            rui.wantTextInput(b.data().borderRectScale().r);
         } else {
 
             // we lost focus
@@ -4529,7 +4509,7 @@ pub fn sliderEntry(src: std.builtin.SourceLocation, comptime label_fmt: ?[]const
                             dataSet(null, b.data().id, "_start_v", init_opts.value.*);
 
                             if (me.button.touch()) {
-                                dvui.dragPreStart(me.p, .{});
+                                rui.dragPreStart(me.p, .{});
                             } else {
                                 // Only start tracking the position on press if this
                                 // is not a touch to prevent the value from
@@ -4539,7 +4519,7 @@ pub fn sliderEntry(src: std.builtin.SourceLocation, comptime label_fmt: ?[]const
                             }
                         }
                     } else if (me.action == .release and me.button.pointer()) {
-                        if (me.button.touch() and dvui.dragging(me.p) == null) {
+                        if (me.button.touch() and rui.dragging(me.p) == null) {
                             text_mode = true;
                             refresh(null, @src(), b.data().id);
                         }
@@ -4554,11 +4534,11 @@ pub fn sliderEntry(src: std.builtin.SourceLocation, comptime label_fmt: ?[]const
                         // only update the value if we are exceeding the
                         // drag threshold to prevent the value from jumping while
                         // entering text mode via a non-drag touch-tap
-                        if (!me.button.touch() or dvui.dragging(me.p) != null) {
+                        if (!me.button.touch() or rui.dragging(me.p) != null) {
                             p = me.p;
                         }
                     } else if (me.action == .position) {
-                        dvui.cursorSet(.arrow);
+                        rui.cursorSet(.arrow);
                         hover = true;
                     }
 
@@ -4741,14 +4721,14 @@ pub fn sliderVector(line: std.builtin.SourceLocation, comptime fmt: []const u8, 
 
     var any_changed = false;
     inline for (0..num_components) |i| {
-        const component_opts = dvui.SliderEntryInitOptions{
+        const component_opts = rui.SliderEntryInitOptions{
             .value = &data_arr[i],
             .min = init_opts.min,
             .max = init_opts.max,
             .interval = init_opts.interval,
         };
 
-        const component_changed = try dvui.sliderEntry(line, fmt, component_opts, opts.override(.{ .id_extra = i, .expand = .both }));
+        const component_changed = try rui.sliderEntry(line, fmt, component_opts, opts.override(.{ .id_extra = i, .expand = .both }));
         any_changed = any_changed or component_changed;
     }
 
@@ -4795,7 +4775,7 @@ pub fn progress(src: std.builtin.SourceLocation, init_opts: Progress_InitOptions
 
 pub var checkbox_defaults: Options = .{
     .name = "Checkbox",
-    .corner_radius = dvui.Rect.all(2),
+    .corner_radius = rui.Rect.all(2),
     .padding = Rect.all(6),
 };
 
@@ -4881,7 +4861,7 @@ pub fn checkmark(checked: bool, focused: bool, rs: RectScale, pressed: bool, hov
 
 pub var radio_defaults: Options = .{
     .name = "Radio",
-    .corner_radius = dvui.Rect.all(2),
+    .corner_radius = rui.Rect.all(2),
     .padding = Rect.all(6),
 };
 
@@ -4977,7 +4957,7 @@ pub fn textEntry(src: std.builtin.SourceLocation, init_opts: TextEntryWidget.Ini
     ret.* = TextEntryWidget.init(src, init_opts, opts);
     try ret.install();
     // can install corner widgets here
-    //_ = try dvui.button(@src(), "upright", .{}, .{ .gravity_x = 1.0 });
+    //_ = try rui.button(@src(), "upright", .{}, .{ .gravity_x = 1.0 });
     ret.processEvents();
     try ret.draw();
     return ret;
@@ -5019,7 +4999,7 @@ pub fn textEntryNumber(src: std.builtin.SourceLocation, comptime T: type, init_o
         else => unreachable,
     };
 
-    const id = dvui.parentGet().extendId(src, opts.idExtra());
+    const id = rui.parentGet().extendId(src, opts.idExtra());
 
     const buffer = dataGetSliceDefault(null, id, "buffer", []u8, &[_]u8{0} ** 32);
 
@@ -5076,7 +5056,7 @@ pub fn textEntryNumber(src: std.builtin.SourceLocation, comptime T: type, init_o
 
     if (result.value != .Valid and (init_opts.value != null or result.value != .Empty)) {
         const rs = te.data().borderRectScale();
-        try rs.r.outsetAll(1).stroke(te.data().options.corner_radiusGet(), 3 * rs.s, dvui.themeGet().color_err, .{ .after = true });
+        try rs.r.outsetAll(1).stroke(te.data().options.corner_radiusGet(), 3 * rs.s, rui.themeGet().color_err, .{ .after = true });
     }
 
     // display min/max
@@ -5558,7 +5538,7 @@ pub fn textureFromTarget(target: TextureTarget) Texture {
 /// Only valid between `Window.begin`and `Window.end`.
 pub fn textureDestroyLater(texture: Texture) void {
     currentWindow().texture_trash.append(texture) catch |err| {
-        dvui.log.err("textureDestroyLater got {!}\n", .{err});
+        rui.log.err("textureDestroyLater got {!}\n", .{err});
     };
 }
 
@@ -5568,10 +5548,10 @@ pub const RenderTarget = struct {
     rendering: bool = true,
 };
 
-/// Change where dvui renders.  Can pass output from `textureCreateTarget` or
+/// Change where rui renders.  Can pass output from `textureCreateTarget` or
 /// null for the screen.  Returns the previous target/offset.
 ///
-/// offset will be subtracted from all dvui rendering, useful as the point on
+/// offset will be subtracted from all rui rendering, useful as the point on
 /// the screen the texture will map to.
 ///
 /// Useful for caching expensive renders or to save a render for export.  See
@@ -5750,11 +5730,11 @@ pub fn renderImage(name: []const u8, image_bytes: []const u8, rs: RectScale, rot
     try renderTexture(tce.texture, rs, .{ .rotation = rotation, .colormod = colormod });
 }
 
-/// Captures dvui drawing to part of the screen in a `Texture`.
+/// Captures rui drawing to part of the screen in a `Texture`.
 pub const Picture = struct {
     r: Rect, // physical pixels captured
-    texture: dvui.TextureTarget = undefined,
-    target: dvui.RenderTarget = undefined,
+    texture: rui.TextureTarget = undefined,
+    target: rui.RenderTarget = undefined,
 
     /// Begin recording drawing to the physical pixels in rect (enlarged to pixel boundaries).
     ///
@@ -5779,37 +5759,37 @@ pub const Picture = struct {
         ret.r.y = y_start;
         ret.r.h = @round(y_end - y_start);
 
-        ret.texture = dvui.textureCreateTarget(@intFromFloat(ret.r.w), @intFromFloat(ret.r.h), .linear) catch return null;
-        ret.target = dvui.renderTarget(.{ .texture = ret.texture, .offset = ret.r.topLeft() });
+        ret.texture = rui.textureCreateTarget(@intFromFloat(ret.r.w), @intFromFloat(ret.r.h), .linear) catch return null;
+        ret.target = rui.renderTarget(.{ .texture = ret.texture, .offset = ret.r.topLeft() });
 
         return ret;
     }
 
     /// Stop recording.
     pub fn stop(self: *Picture) void {
-        _ = dvui.renderTarget(self.target);
+        _ = rui.renderTarget(self.target);
     }
 
     /// Encode texture as png.  Call after `stop` before `deinit`.
     pub fn png(self: *Picture, arena: std.mem.Allocator) ![]u8 {
-        const pixels = dvui.textureReadTarget(arena, self.texture) catch unreachable;
+        const pixels = rui.textureReadTarget(arena, self.texture) catch unreachable;
         defer arena.free(pixels);
 
-        return try dvui.pngEncode(arena, pixels, self.texture.width, self.texture.height, .{});
+        return try rui.pngEncode(arena, pixels, self.texture.width, self.texture.height, .{});
     }
 
     /// Draw recorded texture and destroy it.
     pub fn deinit(self: *Picture) void {
-        const texture = dvui.textureFromTarget(self.texture); // destroys self.texture
-        dvui.renderTexture(texture, .{ .r = self.r }, .{}) catch {};
-        dvui.textureDestroyLater(texture);
+        const texture = rui.textureFromTarget(self.texture); // destroys self.texture
+        rui.renderTexture(texture, .{ .r = self.r }, .{}) catch {};
+        rui.textureDestroyLater(texture);
     }
 };
 
 pub const pngEncodeOptions = struct {
     /// Physical size of image, pixels per meter added to png pHYs chunk.
     /// 0 => don't write the pHYs chunk
-    /// null => dvui will use 72 dpi (2834.64 px/m) times `windowNaturalScale`
+    /// null => rui will use 72 dpi (2834.64 px/m) times `windowNaturalScale`
     resolution: ?u32 = null,
 };
 
@@ -5821,7 +5801,7 @@ pub fn pngEncode(arena: std.mem.Allocator, pixels: []u8, width: u32, height: u32
     const png_bytes = c.stbi_write_png_to_mem(pixels.ptr, @intCast(width * 4), @intCast(width), @intCast(height), 4, &len);
     defer {
         if (wasm) {
-            backend.dvui_c_free(png_bytes);
+            backend.rui_c_free(png_bytes);
         } else {
             c.free(png_bytes);
         }
@@ -5932,7 +5912,7 @@ pub fn plot(src: std.builtin.SourceLocation, plot_opts: PlotWidget.InitOptions, 
 
 pub fn plotXY(src: std.builtin.SourceLocation, plot_opts: PlotWidget.InitOptions, thick: f32, xs: []const f64, ys: []const f64, opts: Options) !void {
     const defaults: Options = .{ .padding = .{} };
-    var p = try dvui.plot(src, plot_opts, defaults.override(opts));
+    var p = try rui.plot(src, plot_opts, defaults.override(opts));
 
     var s1 = p.line();
     for (xs, ys) |x, y| {
@@ -5946,6 +5926,6 @@ pub fn plotXY(src: std.builtin.SourceLocation, plot_opts: PlotWidget.InitOptions
 }
 
 test {
-    //std.debug.print("DVUI test\n", .{});
+    //std.debug.print("RUI test\n", .{});
     std.testing.refAllDecls(@This());
 }
