@@ -1,15 +1,15 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
+const Event = rui.Event;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
 
-const enums = dvui.enums;
+const enums = rui.enums;
 
 const BoxWidget = @This();
 
@@ -35,7 +35,7 @@ pub fn init(src: std.builtin.SourceLocation, dir: enums.Direction, equal_space: 
     self.wd = WidgetData.init(src, .{}, defaults.override(opts));
     self.dir = dir;
     self.equal_space = equal_space;
-    if (dvui.dataGet(null, self.wd.id, "_data", Data)) |d| {
+    if (rui.dataGet(null, self.wd.id, "_data", Data)) |d| {
         self.data_prev = d;
     }
     return self;
@@ -63,7 +63,7 @@ pub fn install(self: *BoxWidget) !void {
         }
     }
 
-    dvui.parentSet(self.widget());
+    rui.parentSet(self.widget());
 }
 
 pub fn drawBackground(self: *BoxWidget) !void {
@@ -71,7 +71,7 @@ pub fn drawBackground(self: *BoxWidget) !void {
 }
 
 pub fn matchEvent(self: *BoxWidget, e: *Event) bool {
-    return dvui.eventMatchSimple(e, self.data());
+    return rui.eventMatchSimple(e, self.data());
 }
 
 pub fn widget(self: *BoxWidget) Widget {
@@ -153,7 +153,7 @@ pub fn rectFor(self: *BoxWidget, id: u32, min_size: Size, e: Options.Expand, g: 
         }
     }
 
-    return dvui.placeIn(rect, ms, e, g);
+    return rui.placeIn(rect, ms, e, g);
 }
 
 pub fn screenRectScale(self: *BoxWidget, rect: Rect) RectScale {
@@ -197,7 +197,7 @@ pub fn deinit(self: *BoxWidget) void {
         if (self.total_weight > 0 and self.childRect.w > 0.001) {
             // we have expanded children, but didn't use all the space, so something has changed
             // equal_space could mean we don't exactly use all the space (due to floating point)
-            dvui.refresh(null, @src(), self.wd.id);
+            rui.refresh(null, @src(), self.wd.id);
         }
     } else {
         if (self.equal_space) {
@@ -209,7 +209,7 @@ pub fn deinit(self: *BoxWidget) void {
         if (self.total_weight > 0 and self.childRect.h > 0.001) {
             // we have expanded children, but didn't use all the space, so something has changed
             // equal_space could mean we don't exactly use all the space (due to floating point)
-            dvui.refresh(null, @src(), self.wd.id);
+            rui.refresh(null, @src(), self.wd.id);
         }
     }
 
@@ -217,9 +217,9 @@ pub fn deinit(self: *BoxWidget) void {
     self.wd.minSizeSetAndRefresh();
     self.wd.minSizeReportToParent();
 
-    dvui.dataSet(null, self.wd.id, "_data", Data{ .total_weight_prev = self.total_weight, .min_space_taken_prev = self.min_space_taken });
+    rui.dataSet(null, self.wd.id, "_data", Data{ .total_weight_prev = self.total_weight, .min_space_taken_prev = self.min_space_taken });
 
-    dvui.parentReset(self.wd.id, self.wd.parent);
+    rui.parentReset(self.wd.id, self.wd.parent);
 }
 
 test {

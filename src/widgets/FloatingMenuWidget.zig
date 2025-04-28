@@ -1,15 +1,15 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
-const MenuWidget = dvui.MenuWidget;
-const ScrollAreaWidget = dvui.ScrollAreaWidget;
+const Event = rui.Event;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
+const MenuWidget = rui.MenuWidget;
+const ScrollAreaWidget = rui.ScrollAreaWidget;
 
 const FloatingMenuWidget = @This();
 
@@ -57,7 +57,7 @@ menu: MenuWidget = undefined,
 init_options: InitOptions = undefined,
 prevClip: Rect = Rect{},
 scale_val: f32 = undefined,
-scaler: dvui.ScaleWidget = undefined,
+scaler: rui.ScaleWidget = undefined,
 scroll: ScrollAreaWidget = undefined,
 
 pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Options) FloatingMenuWidget {
@@ -75,11 +75,11 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
     self.wd = WidgetData.init(src, .{ .subwindow = true }, .{ .id_extra = opts.id_extra, .rect = .{} });
 
     // get scale from parent
-    self.scale_val = self.wd.parent.screenRectScale(Rect{}).s / dvui.windowNaturalScale();
+    self.scale_val = self.wd.parent.screenRectScale(Rect{}).s / rui.windowNaturalScale();
 
     self.init_options = init_opts;
     if (self.init_options.avoid == .auto) {
-        if (dvui.MenuWidget.current()) |pm| {
+        if (rui.MenuWidget.current()) |pm| {
             self.init_options.avoid = switch (pm.init_opts.dir) {
                 .horizontal => .vertical,
                 .vertical => .horizontal,
@@ -92,46 +92,46 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
 }
 
 pub fn install(self: *FloatingMenuWidget) !void {
-    self.prev_rendering = dvui.renderingSet(false);
+    self.prev_rendering = rui.renderingSet(false);
 
-    dvui.parentSet(self.widget());
+    rui.parentSet(self.widget());
 
-    self.prev_windowId = dvui.subwindowCurrentSet(self.wd.id, null).id;
+    self.prev_windowId = rui.subwindowCurrentSet(self.wd.id, null).id;
     self.parent_popup = popupSet(self);
 
-    const avoid: dvui.PlaceOnScreenAvoid = switch (self.init_options.avoid) {
+    const avoid: rui.PlaceOnScreenAvoid = switch (self.init_options.avoid) {
         .none => .none,
         .horizontal => .horizontal,
         .vertical => .vertical,
         .auto => unreachable,
     };
 
-    if (dvui.minSizeGet(self.wd.id)) |_| {
+    if (rui.minSizeGet(self.wd.id)) |_| {
         self.wd.rect = Rect.fromPoint(self.init_options.from.topLeft());
-        const ms = dvui.minSize(self.wd.id, self.options.min_sizeGet());
+        const ms = rui.minSize(self.wd.id, self.options.min_sizeGet());
         self.wd.rect.w = ms.w;
         self.wd.rect.h = ms.h;
-        self.wd.rect = dvui.placeOnScreen(dvui.windowRect(), self.init_options.from, avoid, self.wd.rect);
+        self.wd.rect = rui.placeOnScreen(rui.windowRect(), self.init_options.from, avoid, self.wd.rect);
     } else {
-        self.wd.rect = dvui.placeOnScreen(dvui.windowRect(), self.init_options.from, avoid, Rect.fromPoint(self.init_options.from.topLeft()));
-        dvui.focusSubwindow(self.wd.id, null);
+        self.wd.rect = rui.placeOnScreen(rui.windowRect(), self.init_options.from, avoid, Rect.fromPoint(self.init_options.from.topLeft()));
+        rui.focusSubwindow(self.wd.id, null);
 
         // need a second frame to fit contents (FocusWindow calls refresh but
         // here for clarity)
-        dvui.refresh(null, @src(), self.wd.id);
+        rui.refresh(null, @src(), self.wd.id);
     }
 
     const rs = self.wd.rectScale();
 
-    try dvui.subwindowAdd(self.wd.id, self.wd.rect, rs.r, false, null);
-    dvui.captureMouseMaintain(.{ .id = self.wd.id, .rect = rs.r, .subwindow_id = self.wd.id });
+    try rui.subwindowAdd(self.wd.id, self.wd.rect, rs.r, false, null);
+    rui.captureMouseMaintain(.{ .id = self.wd.id, .rect = rs.r, .subwindow_id = self.wd.id });
     try self.wd.register();
 
     // clip to just our window (using clipSet since we are not inside our parent)
-    self.prevClip = dvui.clipGet();
-    dvui.clipSet(rs.r);
+    self.prevClip = rui.clipGet();
+    rui.clipSet(rs.r);
 
-    self.scaler = dvui.ScaleWidget.init(@src(), self.scale_val, .{ .margin = .{}, .expand = .both });
+    self.scaler = rui.ScaleWidget.init(@src(), self.scale_val, .{ .margin = .{}, .expand = .both });
     try self.scaler.install();
 
     // we are using scroll to do border/background but floating windows
@@ -139,7 +139,7 @@ pub fn install(self: *FloatingMenuWidget) !void {
     self.scroll = ScrollAreaWidget.init(@src(), .{ .horizontal = .none }, self.options.override(.{ .margin = .{}, .expand = .both }));
     try self.scroll.install();
 
-    if (dvui.MenuWidget.current()) |pm| {
+    if (rui.MenuWidget.current()) |pm| {
         pm.child_popup_rect = rs.r;
     }
 
@@ -148,8 +148,8 @@ pub fn install(self: *FloatingMenuWidget) !void {
     try self.menu.install();
 
     // if no widget in this popup has focus, make the menu have focus to handle keyboard events
-    if (dvui.focusedWidgetIdInCurrentSubwindow() == null) {
-        dvui.focusWidget(self.menu.wd.id, null, null);
+    if (rui.focusedWidgetIdInCurrentSubwindow() == null) {
+        rui.focusWidget(self.menu.wd.id, null, null);
     }
 }
 
@@ -167,7 +167,7 @@ pub fn data(self: *FloatingMenuWidget) *WidgetData {
 
 pub fn rectFor(self: *FloatingMenuWidget, id: u32, min_size: Size, e: Options.Expand, g: Options.Gravity) Rect {
     _ = id;
-    return dvui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
+    return rui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
 }
 
 pub fn screenRectScale(self: *FloatingMenuWidget, rect: Rect) RectScale {
@@ -202,7 +202,7 @@ pub fn chainFocused(self: *FloatingMenuWidget, self_call: bool) bool {
     // we have to call chainFocused on our parent if we have one so we
     // can't return early
 
-    if (self.wd.id == dvui.focusedSubwindowId()) {
+    if (self.wd.id == rui.focusedSubwindowId()) {
         // we are focused
         ret = true;
     }
@@ -212,7 +212,7 @@ pub fn chainFocused(self: *FloatingMenuWidget, self_call: bool) bool {
         if (pp.chainFocused(false)) {
             ret = true;
         }
-    } else if (self.prev_windowId == dvui.focusedSubwindowId()) {
+    } else if (self.prev_windowId == rui.focusedSubwindowId()) {
         // no parent popup, is our parent window focused
         ret = true;
     }
@@ -226,27 +226,27 @@ pub fn deinit(self: *FloatingMenuWidget) void {
     self.scaler.deinit();
 
     const rs = self.wd.rectScale();
-    const evts = dvui.events();
+    const evts = rui.events();
     for (evts) |*e| {
-        if (!dvui.eventMatch(e, .{ .id = self.wd.id, .r = rs.r, .cleanup = true }))
+        if (!rui.eventMatch(e, .{ .id = self.wd.id, .r = rs.r, .cleanup = true }))
             continue;
 
         if (e.evt == .mouse) {
             if (e.evt.mouse.action == .focus) {
                 // unhandled click, clear focus
                 e.handled = true;
-                dvui.focusWidget(null, null, null);
+                rui.focusWidget(null, null, null);
             }
         } else if (e.evt == .key) {
             // catch any tabs that weren't handled by widgets
             if (e.evt.key.action == .down and e.evt.key.matchBind("next_widget")) {
                 e.handled = true;
-                dvui.tabIndexNext(e.num);
+                rui.tabIndexNext(e.num);
             }
 
             if (e.evt.key.action == .down and e.evt.key.matchBind("prev_widget")) {
                 e.handled = true;
-                dvui.tabIndexPrev(e.num);
+                rui.tabIndexPrev(e.num);
             }
         }
     }
@@ -278,10 +278,10 @@ pub fn deinit(self: *FloatingMenuWidget) void {
     // outside normal layout, don't call minSizeForChild or self.wd.minSizeReportToParent();
 
     _ = popupSet(self.parent_popup);
-    dvui.parentReset(self.wd.id, self.wd.parent);
-    _ = dvui.subwindowCurrentSet(self.prev_windowId, null);
-    dvui.clipSet(self.prevClip);
-    _ = dvui.renderingSet(self.prev_rendering);
+    rui.parentReset(self.wd.id, self.wd.parent);
+    _ = rui.subwindowCurrentSet(self.prev_windowId, null);
+    rui.clipSet(self.prevClip);
+    _ = rui.renderingSet(self.prev_rendering);
 }
 
 test {

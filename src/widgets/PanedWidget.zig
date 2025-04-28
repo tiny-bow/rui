@@ -1,16 +1,16 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Point = dvui.Point;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
+const Event = rui.Event;
+const Options = rui.Options;
+const Point = rui.Point;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
 
-const enums = dvui.enums;
+const enums = rui.enums;
 
 const PanedWidget = @This();
 
@@ -45,14 +45,14 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
         .vertical => rect.h,
     };
 
-    self.collapsing = dvui.dataGet(null, self.wd.id, "_collapsing", bool) orelse false;
+    self.collapsing = rui.dataGet(null, self.wd.id, "_collapsing", bool) orelse false;
 
-    self.collapsed_state = dvui.dataGet(null, self.wd.id, "_collapsed", bool) orelse (our_size < self.collapsed_size);
+    self.collapsed_state = rui.dataGet(null, self.wd.id, "_collapsed", bool) orelse (our_size < self.collapsed_size);
     if (self.collapsing) {
         self.collapsed_state = false;
     }
 
-    if (dvui.dataGet(null, self.wd.id, "_split_ratio", f32)) |r| {
+    if (rui.dataGet(null, self.wd.id, "_split_ratio", f32)) |r| {
         self.split_ratio = r;
         if (!self.collapsing and !self.collapsed_state and our_size < self.collapsed_size) {
             // collapsing
@@ -82,7 +82,7 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
         }
     }
 
-    if (dvui.animationGet(self.wd.id, "_split_ratio")) |a| {
+    if (rui.animationGet(self.wd.id, "_split_ratio")) |a| {
         self.split_ratio = a.value();
 
         if (self.collapsing and a.done()) {
@@ -98,17 +98,17 @@ pub fn install(self: *PanedWidget) !void {
     try self.wd.register();
 
     try self.wd.borderAndBackground(.{});
-    self.prevClip = dvui.clip(self.wd.contentRectScale().r);
+    self.prevClip = rui.clip(self.wd.contentRectScale().r);
 
-    dvui.parentSet(self.widget());
+    rui.parentSet(self.widget());
 }
 
 pub fn matchEvent(self: *PanedWidget, e: *Event) bool {
-    return dvui.eventMatchSimple(e, self.data());
+    return rui.eventMatchSimple(e, self.data());
 }
 
 pub fn processEvents(self: *PanedWidget) void {
-    const evts = dvui.events();
+    const evts = rui.events();
     for (evts) |*e| {
         if (!self.matchEvent(e))
             continue;
@@ -162,7 +162,7 @@ pub fn showSecond(self: *PanedWidget) bool {
 }
 
 pub fn animateSplit(self: *PanedWidget, end_val: f32) void {
-    dvui.animation(self.wd.id, "_split_ratio", dvui.Animation{ .start_val = self.split_ratio, .end_val = end_val, .end_time = 250_000 });
+    rui.animation(self.wd.id, "_split_ratio", rui.Animation{ .start_val = self.split_ratio, .end_val = end_val, .end_time = 250_000 });
 }
 
 pub fn widget(self: *PanedWidget) Widget {
@@ -173,7 +173,7 @@ pub fn data(self: *PanedWidget) *WidgetData {
     return &self.wd;
 }
 
-pub fn rectFor(self: *PanedWidget, id: u32, min_size: Size, e: Options.Expand, g: Options.Gravity) dvui.Rect {
+pub fn rectFor(self: *PanedWidget, id: u32, min_size: Size, e: Options.Expand, g: Options.Gravity) rui.Rect {
     _ = id;
     var r = self.wd.contentRect().justSize();
     if (self.first_side) {
@@ -194,7 +194,7 @@ pub fn rectFor(self: *PanedWidget, id: u32, min_size: Size, e: Options.Expand, g
                 .vertical => r.h = @max(0, r.h * self.split_ratio - handle_size / 2),
             }
         }
-        return dvui.placeIn(r, min_size, e, g);
+        return rui.placeIn(r, min_size, e, g);
     } else {
         if (self.collapsed()) {
             if (self.split_ratio == 1.0) {
@@ -224,7 +224,7 @@ pub fn rectFor(self: *PanedWidget, id: u32, min_size: Size, e: Options.Expand, g
                 },
             }
         }
-        return dvui.placeIn(r, min_size, e, g);
+        return rui.placeIn(r, min_size, e, g);
     }
 }
 
@@ -232,7 +232,7 @@ pub fn screenRectScale(self: *PanedWidget, rect: Rect) RectScale {
     return self.wd.contentRectScale().rectToRectScale(rect);
 }
 
-pub fn minSizeForChild(self: *PanedWidget, s: dvui.Size) void {
+pub fn minSizeForChild(self: *PanedWidget, s: rui.Size) void {
     self.wd.minSizeMax(self.wd.options.padSize(s));
 }
 
@@ -256,22 +256,22 @@ pub fn processEvent(self: *PanedWidget, e: *Event, bubbling: bool) void {
             },
         }
 
-        if (dvui.captured(self.wd.id) or @abs(mouse - target) < (5 * rs.s)) {
+        if (rui.captured(self.wd.id) or @abs(mouse - target) < (5 * rs.s)) {
             self.hovered = true;
             if (e.evt.mouse.action == .press and e.evt.mouse.button.pointer()) {
                 e.handled = true;
                 // capture and start drag
-                dvui.captureMouse(self.data());
-                dvui.dragPreStart(e.evt.mouse.p, .{ .cursor = cursor });
+                rui.captureMouse(self.data());
+                rui.dragPreStart(e.evt.mouse.p, .{ .cursor = cursor });
             } else if (e.evt.mouse.action == .release and e.evt.mouse.button.pointer()) {
                 e.handled = true;
                 // stop possible drag and capture
-                dvui.captureMouse(null);
-                dvui.dragEnd();
-            } else if (e.evt.mouse.action == .motion and dvui.captured(self.wd.id)) {
+                rui.captureMouse(null);
+                rui.dragEnd();
+            } else if (e.evt.mouse.action == .motion and rui.captured(self.wd.id)) {
                 e.handled = true;
                 // move if dragging
-                if (dvui.dragging(e.evt.mouse.p)) |dps| {
+                if (rui.dragging(e.evt.mouse.p)) |dps| {
                     _ = dps;
                     switch (self.dir) {
                         .horizontal => {
@@ -285,7 +285,7 @@ pub fn processEvent(self: *PanedWidget, e: *Event, bubbling: bool) void {
                     self.split_ratio = @max(0.0, @min(1.0, self.split_ratio));
                 }
             } else if (e.evt.mouse.action == .position) {
-                dvui.cursorSet(cursor);
+                rui.cursorSet(cursor);
             }
         }
     }
@@ -296,13 +296,13 @@ pub fn processEvent(self: *PanedWidget, e: *Event, bubbling: bool) void {
 }
 
 pub fn deinit(self: *PanedWidget) void {
-    dvui.clipSet(self.prevClip);
-    dvui.dataSet(null, self.wd.id, "_collapsing", self.collapsing);
-    dvui.dataSet(null, self.wd.id, "_collapsed", self.collapsed_state);
-    dvui.dataSet(null, self.wd.id, "_split_ratio", self.split_ratio);
+    rui.clipSet(self.prevClip);
+    rui.dataSet(null, self.wd.id, "_collapsing", self.collapsing);
+    rui.dataSet(null, self.wd.id, "_collapsed", self.collapsed_state);
+    rui.dataSet(null, self.wd.id, "_split_ratio", self.split_ratio);
     self.wd.minSizeSetAndRefresh();
     self.wd.minSizeReportToParent();
-    dvui.parentReset(self.wd.id, self.wd.parent);
+    rui.parentReset(self.wd.id, self.wd.parent);
 }
 
 test {

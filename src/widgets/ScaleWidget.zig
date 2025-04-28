@@ -1,14 +1,14 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
-const BoxWidget = dvui.BoxWidget;
+const Event = rui.Event;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
+const BoxWidget = rui.BoxWidget;
 
 const ScaleWidget = @This();
 
@@ -25,7 +25,7 @@ pub fn init(src: std.builtin.SourceLocation, scale_in: f32, opts: Options) Scale
 }
 
 pub fn install(self: *ScaleWidget) !void {
-    dvui.parentSet(self.widget());
+    rui.parentSet(self.widget());
     try self.wd.register();
     try self.wd.borderAndBackground(.{});
 
@@ -52,7 +52,7 @@ pub fn rectFor(self: *ScaleWidget, id: u32, min_size: Size, e: Options.Expand, g
     }
 
     _ = id;
-    return dvui.placeIn(self.wd.contentRect().justSize().scale(s), min_size, e, g);
+    return rui.placeIn(self.wd.contentRect().justSize().scale(s), min_size, e, g);
 }
 
 pub fn screenRectScale(self: *ScaleWidget, rect: Rect) RectScale {
@@ -76,7 +76,7 @@ pub fn deinit(self: *ScaleWidget) void {
     self.box.deinit();
     self.wd.minSizeSetAndRefresh();
     self.wd.minSizeReportToParent();
-    dvui.parentReset(self.wd.id, self.wd.parent);
+    rui.parentReset(self.wd.id, self.wd.parent);
 }
 
 test {

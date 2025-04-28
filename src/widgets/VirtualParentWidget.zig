@@ -1,15 +1,15 @@
 /// This is a widget that forwards all parent calls to its parent.  Useful
 /// where you want to wrap widgets but only to adjust their IDs.
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
+const Event = rui.Event;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
 
 const VirtualParentWidget = @This();
 
@@ -17,14 +17,14 @@ wd: WidgetData = undefined,
 child_rect_union: ?Rect = null,
 
 pub fn init(src: std.builtin.SourceLocation, opts: Options) VirtualParentWidget {
-    const id = dvui.parentGet().extendId(src, opts.idExtra());
-    const rect = dvui.dataGet(null, id, "_rect", Rect);
+    const id = rui.parentGet().extendId(src, opts.idExtra());
+    const rect = rui.dataGet(null, id, "_rect", Rect);
     const defaults = Options{ .name = "Virtual Parent", .rect = rect orelse .{} };
     return VirtualParentWidget{ .wd = WidgetData.init(src, .{}, defaults.override(opts)) };
 }
 
 pub fn install(self: *VirtualParentWidget) !void {
-    dvui.parentSet(self.widget());
+    rui.parentSet(self.widget());
     try self.wd.register();
 }
 
@@ -63,9 +63,9 @@ pub fn processEvent(self: *VirtualParentWidget, e: *Event, bubbling: bool) void 
 
 pub fn deinit(self: *VirtualParentWidget) void {
     if (self.child_rect_union) |u| {
-        dvui.dataSet(null, self.wd.id, "_rect", u);
+        rui.dataSet(null, self.wd.id, "_rect", u);
     }
-    dvui.parentReset(self.wd.id, self.wd.parent);
+    rui.parentReset(self.wd.id, self.wd.parent);
 }
 
 test {

@@ -1,17 +1,17 @@
 const builtin = @import("builtin");
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const ScrollInfo = dvui.ScrollInfo;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
-const ScrollAreaWidget = dvui.ScrollAreaWidget;
-const TextLayoutWidget = dvui.TextLayoutWidget;
+const Event = rui.Event;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const ScrollInfo = rui.ScrollInfo;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
+const ScrollAreaWidget = rui.ScrollAreaWidget;
+const TextLayoutWidget = rui.TextLayoutWidget;
 
 const TextEntryWidget = @This();
 
@@ -118,11 +118,11 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
     switch (self.text_opt) {
         .buffer => |b| self.text = b,
         .buffer_dynamic => |b| self.text = b.backing.*,
-        .internal => self.text = dvui.dataGetSliceDefault(null, self.wd.id, "_buffer", []u8, &.{}),
+        .internal => self.text = rui.dataGetSliceDefault(null, self.wd.id, "_buffer", []u8, &.{}),
     }
 
     self.len = std.mem.indexOfScalar(u8, self.text, 0) orelse self.text.len;
-    self.len = dvui.findUtf8Start(self.text[0..self.len], self.len);
+    self.len = rui.findUtf8Start(self.text[0..self.len], self.len);
     return self;
 }
 
@@ -130,49 +130,49 @@ pub fn install(self: *TextEntryWidget) !void {
     try self.wd.register();
 
     if (self.wd.visible()) {
-        try dvui.tabIndexSet(self.wd.id, self.wd.options.tab_index);
+        try rui.tabIndexSet(self.wd.id, self.wd.options.tab_index);
     }
 
-    dvui.parentSet(self.widget());
+    rui.parentSet(self.widget());
 
     try self.wd.borderAndBackground(.{});
 
-    self.prevClip = dvui.clip(self.wd.borderRectScale().r);
-    const borderClip = dvui.clipGet();
+    self.prevClip = rui.clip(self.wd.borderRectScale().r);
+    const borderClip = rui.clipGet();
 
     self.scroll = ScrollAreaWidget.init(@src(), self.scroll_init_opts, self.wd.options.strip().override(.{ .expand = .both }));
     // scrollbars process mouse events here
     try self.scroll.install();
 
-    self.scrollClip = dvui.clipGet();
+    self.scrollClip = rui.clipGet();
 
     self.textLayout = TextLayoutWidget.init(@src(), .{ .break_lines = self.init_opts.break_lines, .touch_edit_just_focused = false }, self.wd.options.strip().override(.{ .expand = .both, .padding = self.padding }));
-    try self.textLayout.install(.{ .focused = self.wd.id == dvui.focusedWidgetId(), .show_touch_draggables = (self.len > 0) });
-    self.textClip = dvui.clipGet();
+    try self.textLayout.install(.{ .focused = self.wd.id == rui.focusedWidgetId(), .show_touch_draggables = (self.len > 0) });
+    self.textClip = rui.clipGet();
 
     if (try self.textLayout.touchEditing()) |floating_widget| {
         defer floating_widget.deinit();
 
-        var hbox = try dvui.box(@src(), .horizontal, .{
-            .corner_radius = dvui.ButtonWidget.defaults.corner_radiusGet(),
+        var hbox = try rui.box(@src(), .horizontal, .{
+            .corner_radius = rui.ButtonWidget.defaults.corner_radiusGet(),
             .background = true,
-            .border = dvui.Rect.all(1),
+            .border = rui.Rect.all(1),
         });
         defer hbox.deinit();
 
-        if (try dvui.buttonIcon(@src(), "paste", dvui.entypo.clipboard, .{}, .{ .min_size_content = .{ .h = 20 }, .margin = Rect.all(2) })) {
+        if (try rui.buttonIcon(@src(), "paste", rui.entypo.clipboard, .{}, .{ .min_size_content = .{ .h = 20 }, .margin = Rect.all(2) })) {
             self.paste();
         }
 
-        if (try dvui.buttonIcon(@src(), "select all", dvui.entypo.swap, .{}, .{ .min_size_content = .{ .h = 20 }, .margin = Rect.all(2) })) {
+        if (try rui.buttonIcon(@src(), "select all", rui.entypo.swap, .{}, .{ .min_size_content = .{ .h = 20 }, .margin = Rect.all(2) })) {
             self.textLayout.selection.selectAll();
         }
 
-        if (try dvui.buttonIcon(@src(), "cut", dvui.entypo.scissors, .{}, .{ .min_size_content = .{ .h = 20 }, .margin = Rect.all(2) })) {
+        if (try rui.buttonIcon(@src(), "cut", rui.entypo.scissors, .{}, .{ .min_size_content = .{ .h = 20 }, .margin = Rect.all(2) })) {
             self.cut();
         }
 
-        if (try dvui.buttonIcon(@src(), "copy", dvui.entypo.copy, .{}, .{ .min_size_content = .{ .h = 20 }, .margin = Rect.all(2) })) {
+        if (try rui.buttonIcon(@src(), "copy", rui.entypo.copy, .{}, .{ .min_size_content = .{ .h = 20 }, .margin = Rect.all(2) })) {
             self.textLayout.copy();
         }
     }
@@ -183,24 +183,24 @@ pub fn install(self: *TextEntryWidget) !void {
     // changed, we need to update the selection to be valid before we
     // process any events
     var sel = self.textLayout.selection;
-    sel.start = dvui.findUtf8Start(self.text[0..self.len], sel.start);
-    sel.cursor = dvui.findUtf8Start(self.text[0..self.len], sel.cursor);
-    sel.end = dvui.findUtf8Start(self.text[0..self.len], sel.end);
+    sel.start = rui.findUtf8Start(self.text[0..self.len], sel.start);
+    sel.cursor = rui.findUtf8Start(self.text[0..self.len], sel.cursor);
+    sel.end = rui.findUtf8Start(self.text[0..self.len], sel.end);
 
     // textLayout clips to its content, but we need to get events out to our border
-    dvui.clipSet(borderClip);
+    rui.clipSet(borderClip);
 }
 
 pub fn matchEvent(self: *TextEntryWidget, e: *Event) bool {
     // textLayout could be passively listening to events in matchEvent, so
     // don't short circuit
-    const match1 = dvui.eventMatchSimple(e, self.data());
+    const match1 = rui.eventMatchSimple(e, self.data());
     const match2 = self.textLayout.matchEvent(e);
     return match1 or match2;
 }
 
 pub fn processEvents(self: *TextEntryWidget) void {
-    const evts = dvui.events();
+    const evts = rui.events();
     for (evts) |*e| {
         if (!self.matchEvent(e))
             continue;
@@ -210,14 +210,14 @@ pub fn processEvents(self: *TextEntryWidget) void {
 }
 
 pub fn draw(self: *TextEntryWidget) !void {
-    const focused = (self.wd.id == dvui.focusedWidgetId());
+    const focused = (self.wd.id == rui.focusedWidgetId());
 
     if (focused) {
-        dvui.wantTextInput(self.wd.borderRectScale().r);
+        rui.wantTextInput(self.wd.borderRectScale().r);
     }
 
     // set clip back to what textLayout had, so we don't draw over the scrollbars
-    dvui.clipSet(self.textClip);
+    rui.clipSet(self.textClip);
 
     if (self.init_opts.password_char) |pc| {
         // adjust selection for obfuscation
@@ -242,7 +242,7 @@ pub fn draw(self: *TextEntryWidget) !void {
         sel.start = sstart.?;
         sel.cursor = scursor.?;
         sel.end = send.?;
-        var password_str: []u8 = try dvui.currentWindow().arena().alloc(u8, count * pc.len);
+        var password_str: []u8 = try rui.currentWindow().arena().alloc(u8, count * pc.len);
         for (0..count) |i| {
             for (0..pc.len) |pci| {
                 password_str[i * pc.len + pci] = pc[pci];
@@ -284,7 +284,7 @@ pub fn draw(self: *TextEntryWidget) !void {
         try self.drawCursor();
     }
 
-    dvui.clipSet(self.prevClip);
+    rui.clipSet(self.prevClip);
 
     if (focused) {
         try self.wd.focusBorder();
@@ -295,7 +295,7 @@ pub fn drawCursor(self: *TextEntryWidget) !void {
     var sel = self.textLayout.selectionGet(self.len);
     if (sel.empty()) {
         // the cursor can be slightly outside the textLayout clip
-        dvui.clipSet(self.scrollClip);
+        rui.clipSet(self.scrollClip);
 
         var crect = self.textLayout.cursor_rect.plus(.{ .x = -1 });
         crect.w = 2;
@@ -313,7 +313,7 @@ pub fn data(self: *TextEntryWidget) *WidgetData {
 
 pub fn rectFor(self: *TextEntryWidget, id: u32, min_size: Size, e: Options.Expand, g: Options.Gravity) Rect {
     _ = id;
-    return dvui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
+    return rui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
 }
 
 pub fn screenRectScale(self: *TextEntryWidget, rect: Rect) RectScale {
@@ -357,7 +357,7 @@ pub fn textTyped(self: *TextEntryWidget, new: []const u8, selected: bool) void {
             .buffer_dynamic => |b| {
                 new_size = @min(new_size, b.limit);
                 b.backing.* = b.allocator.realloc(self.text, new_size) catch blk: {
-                    dvui.log.debug("{x} TextEntryWidget.textTyped failed to realloc backing\n", .{self.wd.id});
+                    rui.log.debug("{x} TextEntryWidget.textTyped failed to realloc backing\n", .{self.wd.id});
                     break :blk b.backing.*;
                 };
                 self.text = b.backing.*;
@@ -365,15 +365,15 @@ pub fn textTyped(self: *TextEntryWidget, new: []const u8, selected: bool) void {
             .internal => |i| {
                 new_size = @min(new_size, i.limit);
                 var oom = false;
-                const copy = dvui.currentWindow().arena().dupe(u8, self.text) catch blk: {
+                const copy = rui.currentWindow().arena().dupe(u8, self.text) catch blk: {
                     oom = true;
-                    dvui.log.debug("{x} TextEntryWidget.textTyped failed to dupe internal buffer for grow\n", .{self.wd.id});
+                    rui.log.debug("{x} TextEntryWidget.textTyped failed to dupe internal buffer for grow\n", .{self.wd.id});
                     break :blk &.{};
                 };
                 if (!oom) {
-                    dvui.dataRemove(null, self.wd.id, "_buffer");
-                    dvui.dataSetSliceCopies(null, self.wd.id, "_buffer", &[_]u8{0}, new_size);
-                    self.text = dvui.dataGetSlice(null, self.wd.id, "_buffer", []u8).?;
+                    rui.dataRemove(null, self.wd.id, "_buffer");
+                    rui.dataSetSliceCopies(null, self.wd.id, "_buffer", &[_]u8{0}, new_size);
+                    self.text = rui.dataGetSlice(null, self.wd.id, "_buffer", []u8).?;
                     @memcpy(self.text[0..copy.len], copy);
                 }
             },
@@ -425,7 +425,7 @@ pub fn textTyped(self: *TextEntryWidget, new: []const u8, selected: bool) void {
 
     // we might have dropped to a new line, so make sure the cursor is visible
     self.textLayout.scroll_to_cursor_next_frame = true;
-    dvui.refresh(null, @src(), self.wd.id);
+    rui.refresh(null, @src(), self.wd.id);
 }
 
 /// Remove all characters that not present in filter_chars.
@@ -502,13 +502,13 @@ pub fn processEvent(self: *TextEntryWidget, e: *Event, bubbling: bool) void {
         .key => |ke| blk: {
             if (ke.action == .down and ke.matchBind("next_widget")) {
                 e.handled = true;
-                dvui.tabIndexNext(e.num);
+                rui.tabIndexNext(e.num);
                 break :blk;
             }
 
             if (ke.action == .down and ke.matchBind("prev_widget")) {
                 e.handled = true;
-                dvui.tabIndexPrev(e.num);
+                rui.tabIndexPrev(e.num);
                 break :blk;
             }
 
@@ -756,7 +756,7 @@ pub fn processEvent(self: *TextEntryWidget, e: *Event, bubbling: bool) void {
                             self.textTyped("\n", false);
                         } else {
                             self.enter_pressed = true;
-                            dvui.refresh(null, @src(), self.wd.id);
+                            rui.refresh(null, @src(), self.wd.id);
                         }
                     }
                 },
@@ -784,7 +784,7 @@ pub fn processEvent(self: *TextEntryWidget, e: *Event, bubbling: bool) void {
         .mouse => |me| {
             if (me.action == .focus) {
                 e.handled = true;
-                dvui.focusWidget(self.wd.id, null, e.num);
+                rui.focusWidget(self.wd.id, null, e.num);
             }
         },
         else => {},
@@ -800,8 +800,8 @@ pub fn processEvent(self: *TextEntryWidget, e: *Event, bubbling: bool) void {
 }
 
 pub fn paste(self: *TextEntryWidget) void {
-    const clip_text = dvui.clipboardText() catch |err| blk: {
-        dvui.log.err("clipboardText error {!}\n", .{err});
+    const clip_text = rui.clipboardText() catch |err| blk: {
+        rui.log.err("clipboardText error {!}\n", .{err});
         break :blk "";
     };
 
@@ -825,8 +825,8 @@ pub fn cut(self: *TextEntryWidget) void {
     var sel = self.textLayout.selectionGet(self.len);
     if (!sel.empty()) {
         // copy selection to clipboard
-        dvui.clipboardTextSet(self.text[sel.start..sel.end]) catch |err| {
-            dvui.log.err("clipboardTextSet error {!}\n", .{err});
+        rui.clipboardTextSet(self.text[sel.start..sel.end]) catch |err| {
+            rui.log.err("clipboardTextSet error {!}\n", .{err});
         };
 
         // delete selection
@@ -855,20 +855,20 @@ pub fn deinit(self: *TextEntryWidget) void {
                     b.backing.*.len = new_len;
                     self.text.len = new_len;
                 } else {
-                    dvui.log.debug("{x} TextEntryWidget.deinit failed to resize backing\n", .{self.wd.id});
+                    rui.log.debug("{x} TextEntryWidget.deinit failed to resize backing\n", .{self.wd.id});
                 }
             },
             .internal => {
                 var oom = false;
-                const copy = dvui.currentWindow().arena().dupe(u8, self.text[0..new_len]) catch blk: {
+                const copy = rui.currentWindow().arena().dupe(u8, self.text[0..new_len]) catch blk: {
                     oom = true;
-                    dvui.log.debug("{x} TextEntryWidget.deinit failed to dupe internal buffer for shrink\n", .{self.wd.id});
+                    rui.log.debug("{x} TextEntryWidget.deinit failed to dupe internal buffer for shrink\n", .{self.wd.id});
                     break :blk &.{};
                 };
                 if (!oom) {
-                    dvui.dataRemove(null, self.wd.id, "_buffer");
-                    dvui.dataSetSliceCopies(null, self.wd.id, "_buffer", &[_]u8{0}, new_len);
-                    self.text = dvui.dataGetSlice(null, self.wd.id, "_buffer", []u8).?;
+                    rui.dataRemove(null, self.wd.id, "_buffer");
+                    rui.dataSetSliceCopies(null, self.wd.id, "_buffer", &[_]u8{0}, new_len);
+                    self.text = rui.dataGetSlice(null, self.wd.id, "_buffer", []u8).?;
                     @memcpy(self.text, copy);
                 }
             },
@@ -878,10 +878,10 @@ pub fn deinit(self: *TextEntryWidget) void {
     self.textLayout.deinit();
     self.scroll.deinit();
 
-    dvui.clipSet(self.prevClip);
+    rui.clipSet(self.prevClip);
     self.wd.minSizeSetAndRefresh();
     self.wd.minSizeReportToParent();
-    dvui.parentReset(self.wd.id, self.wd.parent);
+    rui.parentReset(self.wd.id, self.wd.parent);
 }
 
 test {

@@ -1,17 +1,17 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Point = dvui.Point;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
-const BoxWidget = dvui.BoxWidget;
+const Event = rui.Event;
+const Options = rui.Options;
+const Point = rui.Point;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
+const BoxWidget = rui.BoxWidget;
 
-const enums = dvui.enums;
+const enums = rui.enums;
 
 const MenuWidget = @This();
 
@@ -65,27 +65,27 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
     self.wd = WidgetData.init(src, .{}, options);
     self.init_opts = init_opts;
 
-    self.winId = dvui.subwindowCurrentId();
-    if (dvui.dataGet(null, self.wd.id, "_sub_act", bool)) |a| {
+    self.winId = rui.subwindowCurrentId();
+    if (rui.dataGet(null, self.wd.id, "_sub_act", bool)) |a| {
         self.submenus_activated = a;
     } else if (current()) |pm| {
         self.submenus_activated = pm.submenus_in_child;
     }
 
-    self.mouse_mode = dvui.dataGet(null, self.wd.id, "_mouse_mode", bool) orelse false;
+    self.mouse_mode = rui.dataGet(null, self.wd.id, "_mouse_mode", bool) orelse false;
 
     return self;
 }
 
 pub fn install(self: *MenuWidget) !void {
-    dvui.parentSet(self.widget());
+    rui.parentSet(self.widget());
     self.parentMenu = menuSet(self);
     try self.wd.register();
     try self.wd.borderAndBackground(.{});
 
-    const evts = dvui.events();
+    const evts = rui.events();
     for (evts) |*e| {
-        if (!dvui.eventMatchSimple(e, self.data()))
+        if (!rui.eventMatchSimple(e, self.data()))
             continue;
 
         self.processEvent(e, false);
@@ -100,7 +100,7 @@ pub fn close(self: *MenuWidget) void {
     // bubble this event to close all popups that had submenus leading to this
     var e = Event{ .evt = .{ .close_popup = .{} } };
     self.processEvent(&e, true);
-    dvui.refresh(null, @src(), self.wd.id);
+    rui.refresh(null, @src(), self.wd.id);
 }
 
 pub fn widget(self: *MenuWidget) Widget {
@@ -113,7 +113,7 @@ pub fn data(self: *MenuWidget) *WidgetData {
 
 pub fn rectFor(self: *MenuWidget, id: u32, min_size: Size, e: Options.Expand, g: Options.Gravity) Rect {
     _ = id;
-    return dvui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
+    return rui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
 }
 
 pub fn screenRectScale(self: *MenuWidget, rect: Rect) RectScale {
@@ -129,11 +129,11 @@ pub fn processEvent(self: *MenuWidget, e: *Event, bubbling: bool) void {
     switch (e.evt) {
         .mouse => |me| {
             if (me.action == .position) {
-                if (dvui.mouseTotalMotion().nonZero()) {
+                if (rui.mouseTotalMotion().nonZero()) {
                     self.mouse_mode = true;
-                    if (dvui.dataGet(null, self.wd.id, "_child_popup", Rect)) |r| {
+                    if (rui.dataGet(null, self.wd.id, "_child_popup", Rect)) |r| {
                         const center = Point{ .x = r.x + r.w / 2, .y = r.y + r.h / 2 };
-                        const cw = dvui.currentWindow();
+                        const cw = rui.currentWindow();
                         const to_center = Point.diff(center, cw.mouse_pt_prev);
                         const movement = Point.diff(cw.mouse_pt, cw.mouse_pt_prev);
                         const dot_prod = movement.x * to_center.x + movement.y * to_center.y;
@@ -166,7 +166,7 @@ pub fn processEvent(self: *MenuWidget, e: *Event, bubbling: bool) void {
                         if (self.init_opts.dir == .vertical) {
                             e.handled = true;
                             // TODO: don't do this if focus would move outside the menu
-                            dvui.tabIndexPrev(e.num);
+                            rui.tabIndexPrev(e.num);
                         }
                     },
                     .down => {
@@ -174,7 +174,7 @@ pub fn processEvent(self: *MenuWidget, e: *Event, bubbling: bool) void {
                         if (self.init_opts.dir == .vertical) {
                             e.handled = true;
                             // TODO: don't do this if focus would move outside the menu
-                            dvui.tabIndexNext(e.num);
+                            rui.tabIndexNext(e.num);
                         }
                     },
                     .left => {
@@ -184,13 +184,13 @@ pub fn processEvent(self: *MenuWidget, e: *Event, bubbling: bool) void {
                             if (self.parentMenu) |pm| {
                                 pm.submenus_activated = false;
                                 if (self.parentSubwindowId) |sid| {
-                                    dvui.focusSubwindow(sid, null);
+                                    rui.focusSubwindow(sid, null);
                                 }
                             }
                         } else {
                             e.handled = true;
                             // TODO: don't do this if focus would move outside the menu
-                            dvui.tabIndexPrev(e.num);
+                            rui.tabIndexPrev(e.num);
                         }
                     },
                     .right => {
@@ -198,7 +198,7 @@ pub fn processEvent(self: *MenuWidget, e: *Event, bubbling: bool) void {
                         if (self.init_opts.dir == .horizontal) {
                             e.handled = true;
                             // TODO: don't do this if focus would move outside the menu
-                            dvui.tabIndexNext(e.num);
+                            rui.tabIndexNext(e.num);
                         }
                     },
                     else => {},
@@ -218,15 +218,15 @@ pub fn processEvent(self: *MenuWidget, e: *Event, bubbling: bool) void {
 
 pub fn deinit(self: *MenuWidget) void {
     self.box.deinit();
-    dvui.dataSet(null, self.wd.id, "_mouse_mode", self.mouse_mode);
-    dvui.dataSet(null, self.wd.id, "_sub_act", self.submenus_activated);
+    rui.dataSet(null, self.wd.id, "_mouse_mode", self.mouse_mode);
+    rui.dataSet(null, self.wd.id, "_sub_act", self.submenus_activated);
     if (self.child_popup_rect) |r| {
-        dvui.dataSet(null, self.wd.id, "_child_popup", r);
+        rui.dataSet(null, self.wd.id, "_child_popup", r);
     }
     self.wd.minSizeSetAndRefresh();
     self.wd.minSizeReportToParent();
     _ = menuSet(self.parentMenu);
-    dvui.parentReset(self.wd.id, self.wd.parent);
+    rui.parentReset(self.wd.id, self.wd.parent);
 }
 
 test {

@@ -1,7 +1,7 @@
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
-const Point = dvui.Point;
-const Rect = dvui.Rect;
+const Point = rui.Point;
+const Rect = rui.Rect;
 
 const RectScale = @This();
 

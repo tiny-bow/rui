@@ -1,6 +1,6 @@
 //! You can find below a list of available widgets.
 //!
-//! Note that most of the time, you will **not** instanciate them directly but instead rely on higher level functions available in `dvui` top module.
+//! Note that most of the time, you will **not** instanciate them directly but instead rely on higher level functions available in `rui` top module.
 //!
 //! The corresponding function is usually indicated in the doc of each Widget.
 
@@ -36,7 +36,7 @@ pub const TextLayoutWidget = @import("widgets/TextLayoutWidget.zig");
 pub const VirtualParentWidget = @import("widgets/VirtualParentWidget.zig");
 
 // Needed for autodocs "backlink" to work
-const dvui = @import("dvui");
+const rui = @import("rui");
 
 test {
     @import("std").testing.refAllDecls(@This());

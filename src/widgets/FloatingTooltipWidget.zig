@@ -1,13 +1,13 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
+const Event = rui.Event;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
 
 const FloatingTooltipWidget = @This();
 
@@ -52,7 +52,7 @@ wd: WidgetData = undefined,
 prev_windowId: u32 = 0,
 prevClip: Rect = Rect{},
 scale_val: f32 = undefined,
-scaler: dvui.ScaleWidget = undefined,
+scaler: rui.ScaleWidget = undefined,
 options: Options = undefined,
 init_options: InitOptions = undefined,
 showing: bool = false,
@@ -78,7 +78,7 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts_in: Op
     var self = FloatingTooltipWidget{};
 
     // get scale from parent
-    self.scale_val = dvui.parentGet().screenRectScale(Rect{}).s / dvui.windowNaturalScale();
+    self.scale_val = rui.parentGet().screenRectScale(Rect{}).s / rui.windowNaturalScale();
     self.options = defaults.override(opts_in);
     if (self.options.min_size_content) |msc| {
         self.options.min_size_content = msc.scale(self.scale_val);
@@ -90,7 +90,7 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts_in: Op
     self.wd = WidgetData.init(src, .{ .subwindow = true }, (Options{ .name = "FloatingTooltip" }).override(.{ .rect = self.options.rect orelse .{} }));
 
     self.init_options = init_opts;
-    self.showing = dvui.dataGet(null, self.wd.id, "_showing", bool) orelse false;
+    self.showing = rui.dataGet(null, self.wd.id, "_showing", bool) orelse false;
 
     return self;
 }
@@ -102,9 +102,9 @@ pub fn shown(self: *FloatingTooltipWidget) !bool {
     }
 
     // check for mouse position in active_rect
-    const evts = dvui.events();
+    const evts = rui.events();
     for (evts) |*e| {
-        if (!dvui.eventMatch(e, .{ .id = self.wd.id, .r = self.init_options.active_rect })) {
+        if (!rui.eventMatch(e, .{ .id = self.wd.id, .r = self.init_options.active_rect })) {
             continue;
         }
 
@@ -119,20 +119,20 @@ pub fn shown(self: *FloatingTooltipWidget) !bool {
     if (self.showing) {
         switch (self.init_options.position) {
             .horizontal, .vertical => |o| {
-                const ar = self.init_options.active_rect.scale(1 / dvui.windowNaturalScale());
-                const r: Rect = dvui.Rect.fromPoint(ar.topLeft()).toSize(self.wd.rect.size());
-                self.wd.rect = dvui.placeOnScreen(dvui.windowRect(), ar, if (o == .horizontal) .horizontal else .vertical, r);
+                const ar = self.init_options.active_rect.scale(1 / rui.windowNaturalScale());
+                const r: Rect = rui.Rect.fromPoint(ar.topLeft()).toSize(self.wd.rect.size());
+                self.wd.rect = rui.placeOnScreen(rui.windowRect(), ar, if (o == .horizontal) .horizontal else .vertical, r);
             },
             .sticky => {
-                if (dvui.firstFrame(self.wd.id)) {
-                    const mp = dvui.currentWindow().mouse_pt.scale(1 / dvui.windowNaturalScale());
-                    dvui.dataSet(null, self.wd.id, "_sticky_pt", mp);
+                if (rui.firstFrame(self.wd.id)) {
+                    const mp = rui.currentWindow().mouse_pt.scale(1 / rui.windowNaturalScale());
+                    rui.dataSet(null, self.wd.id, "_sticky_pt", mp);
                 } else {
-                    const mp = dvui.dataGet(null, self.wd.id, "_sticky_pt", dvui.Point) orelse dvui.Point{};
-                    var r: Rect = dvui.Rect.fromPoint(mp).toSize(self.wd.rect.size());
+                    const mp = rui.dataGet(null, self.wd.id, "_sticky_pt", rui.Point) orelse rui.Point{};
+                    var r: Rect = rui.Rect.fromPoint(mp).toSize(self.wd.rect.size());
                     r.x += 10;
                     r.y -= r.h + 10;
-                    self.wd.rect = dvui.placeOnScreen(dvui.windowRect(), .{}, .none, r);
+                    self.wd.rect = rui.placeOnScreen(rui.windowRect(), .{}, .none, r);
                 }
             },
         }
@@ -143,7 +143,7 @@ pub fn shown(self: *FloatingTooltipWidget) !bool {
         if (self.init_options.interactive) {
             // check for mouse position in tooltip window rect
             for (evts) |*e| {
-                if (!dvui.eventMatch(e, .{ .id = self.wd.id, .r = self.wd.borderRectScale().r })) {
+                if (!rui.eventMatch(e, .{ .id = self.wd.id, .r = self.wd.borderRectScale().r })) {
                     continue;
                 }
 
@@ -161,24 +161,24 @@ pub fn shown(self: *FloatingTooltipWidget) !bool {
 
 pub fn install(self: *FloatingTooltipWidget) !void {
     self.installed = true;
-    self.prev_rendering = dvui.renderingSet(false);
+    self.prev_rendering = rui.renderingSet(false);
 
-    dvui.parentSet(self.widget());
+    rui.parentSet(self.widget());
 
-    self.prev_windowId = dvui.subwindowCurrentSet(self.wd.id, null).id;
+    self.prev_windowId = rui.subwindowCurrentSet(self.wd.id, null).id;
     self.parent_tooltip = tooltipSet(self);
 
     const rs = self.wd.rectScale();
 
-    try dvui.subwindowAdd(self.wd.id, self.wd.rect, rs.r, false, self.prev_windowId);
-    dvui.captureMouseMaintain(.{ .id = self.wd.id, .rect = rs.r, .subwindow_id = self.wd.id });
+    try rui.subwindowAdd(self.wd.id, self.wd.rect, rs.r, false, self.prev_windowId);
+    rui.captureMouseMaintain(.{ .id = self.wd.id, .rect = rs.r, .subwindow_id = self.wd.id });
     try self.wd.register();
 
     // clip to just our window (using clipSet since we are not inside our parent)
-    self.prevClip = dvui.clipGet();
-    dvui.clipSet(rs.r);
+    self.prevClip = rui.clipGet();
+    rui.clipSet(rs.r);
 
-    self.scaler = dvui.ScaleWidget.init(@src(), self.scale_val, self.options.override(.{ .expand = .both }));
+    self.scaler = rui.ScaleWidget.init(@src(), self.scale_val, self.options.override(.{ .expand = .both }));
     try self.scaler.install();
 }
 
@@ -192,7 +192,7 @@ pub fn data(self: *FloatingTooltipWidget) *WidgetData {
 
 pub fn rectFor(self: *FloatingTooltipWidget, id: u32, min_size: Size, e: Options.Expand, g: Options.Gravity) Rect {
     _ = id;
-    return dvui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
+    return rui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
 }
 
 pub fn screenRectScale(self: *FloatingTooltipWidget, rect: Rect) RectScale {
@@ -217,7 +217,7 @@ pub fn deinit(self: *FloatingTooltipWidget) void {
 
     // check if we should still be shown
     if (self.mouse_good_this_frame or (self.init_options.interactive and self.tt_child_shown)) {
-        dvui.dataSet(null, self.wd.id, "_showing", true);
+        rui.dataSet(null, self.wd.id, "_showing", true);
         var parent: ?*FloatingTooltipWidget = self.parent_tooltip;
         while (parent) |p| {
             p.tt_child_shown = true;
@@ -225,8 +225,8 @@ pub fn deinit(self: *FloatingTooltipWidget) void {
         }
     } else {
         // don't store showing if mouse is outside trigger and tooltip which will close it next frame
-        dvui.dataRemove(null, self.wd.id, "_showing");
-        dvui.refresh(null, @src(), self.wd.id); // refresh with new hidden state
+        rui.dataRemove(null, self.wd.id, "_showing");
+        rui.refresh(null, @src(), self.wd.id); // refresh with new hidden state
     }
 
     self.scaler.deinit();
@@ -235,10 +235,10 @@ pub fn deinit(self: *FloatingTooltipWidget) void {
     // outside normal layout, don't call minSizeForChild or self.wd.minSizeReportToParent();
 
     _ = tooltipSet(self.parent_tooltip);
-    dvui.parentReset(self.wd.id, self.wd.parent);
-    _ = dvui.subwindowCurrentSet(self.prev_windowId, null);
-    dvui.clipSet(self.prevClip);
-    _ = dvui.renderingSet(self.prev_rendering);
+    rui.parentReset(self.wd.id, self.wd.parent);
+    _ = rui.subwindowCurrentSet(self.prev_windowId, null);
+    rui.clipSet(self.prevClip);
+    _ = rui.renderingSet(self.prev_rendering);
 }
 
 test {

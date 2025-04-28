@@ -1,9 +1,9 @@
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
-const Point = dvui.Point;
-const Rect = dvui.Rect;
+const Point = rui.Point;
+const Rect = rui.Rect;
 
-const enums = dvui.enums;
+const enums = rui.enums;
 
 const Event = @This();
 
@@ -47,7 +47,7 @@ pub const Key = struct {
     mod: enums.Mod,
 
     pub fn matchBind(self: Key, keybind_name: []const u8) bool {
-        const cw = dvui.currentWindow();
+        const cw = rui.currentWindow();
 
         var name = keybind_name;
         while (true) {
@@ -99,7 +99,7 @@ pub const Mouse = struct {
         // - generally you don't want to mark this as handled, the exception is
         // if you are covering up child widgets and don't want them to react to
         // the mouse hovering over them
-        // - instead, call dvui.cursorSet()
+        // - instead, call rui.cursorSet()
         position,
     };
 

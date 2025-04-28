@@ -1,7 +1,7 @@
 const std = @import("std");
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
-const border = dvui.Rect.all(1);
+const border = rui.Rect.all(1);
 
 //===============================================
 //=============BASIC FIELD WIDGETS===============
@@ -16,7 +16,7 @@ pub fn IntFieldOptions(comptime T: type) type {
         widget_type: enum { number_entry, slider } = .number_entry,
         min: T = std.math.minInt(T),
         max: T = std.math.maxInt(T),
-        dvui_opts: dvui.Options = .{},
+        rui_opts: rui.Options = .{},
         disabled: bool = false,
         label_override: ?[]const u8 = null,
     };
@@ -27,44 +27,44 @@ fn intFieldWidget(
     comptime T: type,
     result: *T,
     opt: IntFieldOptions(T),
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     if (opt.disabled) return;
     switch (opt.widget_type) {
         .number_entry => {
-            var box = try dvui.box(@src(), .horizontal, .{});
+            var box = try rui.box(@src(), .horizontal, .{});
             defer box.deinit();
 
-            try dvui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
+            try rui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
 
-            var hbox_aligned = try dvui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
+            var hbox_aligned = try rui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
             defer hbox_aligned.deinit();
             alignment.record(box.data().id, hbox_aligned.data());
 
-            const maybe_num = try dvui.textEntryNumber(@src(), T, .{
+            const maybe_num = try rui.textEntryNumber(@src(), T, .{
                 .min = opt.min,
                 .max = opt.max,
                 .value = result,
-            }, opt.dvui_opts);
+            }, opt.rui_opts);
             if (maybe_num.value == .Valid) {
                 result.* = maybe_num.value.Valid;
             }
-            try dvui.label(@src(), "{}", .{result.*}, .{});
+            try rui.label(@src(), "{}", .{result.*}, .{});
         },
         .slider => {
-            var box = try dvui.box(@src(), .horizontal, .{});
+            var box = try rui.box(@src(), .horizontal, .{});
             defer box.deinit();
 
-            try dvui.label(@src(), "{s}", .{name}, .{});
+            try rui.label(@src(), "{s}", .{name}, .{});
 
             var percent = intToNormalizedPercent(result.*, opt.min, opt.max);
-            //TODO implement dvui_opts
-            _ = try dvui.slider(@src(), .horizontal, &percent, .{
+            //TODO implement rui_opts
+            _ = try rui.slider(@src(), .horizontal, &percent, .{
                 .expand = .horizontal,
                 .min_size_content = .{ .w = 100, .h = 20 },
             });
             result.* = normalizedPercentToInt(percent, T, opt.min, opt.max);
-            try dvui.label(@src(), "{}", .{result.*}, .{});
+            try rui.label(@src(), "{}", .{result.*}, .{});
         },
     }
 }
@@ -93,7 +93,7 @@ pub fn FloatFieldOptions(comptime T: type) type {
     return struct {
         min: ?T = null, // you could also use floatMin/floatMax here, but that
         max: ?T = null, // would cause issues rendering min and max numbers
-        dvui_opts: dvui.Options = .{},
+        rui_opts: rui.Options = .{},
         disabled: bool = false,
         label_override: ?[]const u8 = null,
     };
@@ -104,28 +104,28 @@ pub fn floatFieldWidget(
     comptime T: type,
     result: *T,
     opt: FloatFieldOptions(T),
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     if (opt.disabled) return;
 
-    var box = try dvui.box(@src(), .horizontal, .{});
+    var box = try rui.box(@src(), .horizontal, .{});
     defer box.deinit();
-    try dvui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
+    try rui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
 
-    var hbox_aligned = try dvui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
+    var hbox_aligned = try rui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
     defer hbox_aligned.deinit();
     alignment.record(box.data().id, hbox_aligned.data());
 
-    const maybe_num = try dvui.textEntryNumber(@src(), T, .{ .min = opt.min, .max = opt.max }, opt.dvui_opts);
+    const maybe_num = try rui.textEntryNumber(@src(), T, .{ .min = opt.min, .max = opt.max }, opt.rui_opts);
     if (maybe_num.value == .Valid) {
         result.* = maybe_num.value.Valid;
     }
-    try dvui.label(@src(), "{d}", .{result.*}, .{});
+    try rui.label(@src(), "{d}", .{result.*}, .{});
 }
 
 pub const EnumFieldOptions = struct {
     widget_type: enum { radio, dropdown } = .dropdown,
-    dvui_opts: dvui.Options = .{},
+    rui_opts: rui.Options = .{},
     disabled: bool = false,
     label_override: ?[]const u8 = null,
 };
@@ -135,32 +135,32 @@ fn enumFieldWidget(
     comptime T: type,
     result: *T,
     opt: EnumFieldOptions,
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     if (opt.disabled) return;
 
-    var box = try dvui.box(@src(), .horizontal, .{});
+    var box = try rui.box(@src(), .horizontal, .{});
     defer box.deinit();
 
-    try dvui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
+    try rui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
     switch (opt.widget_type) {
         .dropdown => {
-            var hbox_aligned = try dvui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
+            var hbox_aligned = try rui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
             defer hbox_aligned.deinit();
             alignment.record(box.data().id, hbox_aligned.data());
 
             const entries = std.meta.fieldNames(T);
             var choice: usize = @intFromEnum(result.*);
-            _ = try dvui.dropdown(@src(), entries, &choice, opt.dvui_opts);
+            _ = try rui.dropdown(@src(), entries, &choice, opt.rui_opts);
             result.* = @enumFromInt(choice);
         },
         .radio => {
             inline for (@typeInfo(T).@"enum".fields) |field| {
-                if (try dvui.radio(
+                if (try rui.radio(
                     @src(),
                     result.* == @as(T, @enumFromInt(field.value)),
                     field.name,
-                    opt.dvui_opts,
+                    opt.rui_opts,
                 )) {
                     result.* = @enumFromInt(field.value);
                 }
@@ -171,7 +171,7 @@ fn enumFieldWidget(
 
 pub const BoolFieldOptions = struct {
     widget_type: enum { checkbox, dropdown, toggle } = .toggle,
-    dvui_opts: dvui.Options = .{},
+    rui_opts: rui.Options = .{},
     disabled: bool = false,
     label_override: ?[]const u8 = null,
 };
@@ -180,39 +180,39 @@ fn boolFieldWidget(
     comptime name: []const u8,
     result: *bool,
     opt: BoolFieldOptions,
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     if (opt.disabled) return;
-    var box = try dvui.box(@src(), .horizontal, .{});
+    var box = try rui.box(@src(), .horizontal, .{});
     defer box.deinit();
 
-    //TODO implement dvui_opts for other types
+    //TODO implement rui_opts for other types
     switch (opt.widget_type) {
         .checkbox => {
-            try dvui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
+            try rui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
 
-            var hbox_aligned = try dvui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
+            var hbox_aligned = try rui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
             defer hbox_aligned.deinit();
             alignment.record(box.data().id, hbox_aligned.data());
 
-            _ = try dvui.checkbox(@src(), result, "", opt.dvui_opts);
+            _ = try rui.checkbox(@src(), result, "", opt.rui_opts);
         },
         .dropdown => {
             const entries = .{ "false", "true" };
             var choice: usize = if (result.* == false) 0 else 1;
-            try dvui.labelNoFmt(@src(), opt.label_override orelse name, .{});
-            _ = try dvui.dropdown(@src(), &entries, &choice, .{});
+            try rui.labelNoFmt(@src(), opt.label_override orelse name, .{});
+            _ = try rui.dropdown(@src(), &entries, &choice, .{});
             result.* = if (choice == 0) false else true;
         },
         .toggle => {
             switch (result.*) {
                 true => {
-                    if (try dvui.button(@src(), name ++ " enabled", .{}, .{ .border = border, .background = true })) {
+                    if (try rui.button(@src(), name ++ " enabled", .{}, .{ .border = border, .background = true })) {
                         result.* = !result.*;
                     }
                 },
                 false => {
-                    if (try dvui.button(@src(), name ++ " disabled", .{}, .{ .border = border, .background = true })) {
+                    if (try rui.button(@src(), name ++ " disabled", .{}, .{ .border = border, .background = true })) {
                         result.* = !result.*;
                     }
                 },
@@ -223,7 +223,7 @@ fn boolFieldWidget(
 
 //==========Text Field Widget and Options============
 pub const TextFieldOptions = struct {
-    dvui_opts: dvui.Options = .{},
+    rui_opts: rui.Options = .{},
     disabled: bool = false,
     label_override: ?[]const u8 = null,
 };
@@ -235,15 +235,15 @@ fn textFieldWidget(
     opt: TextFieldOptions,
     comptime alloc: bool,
     allocator: ?std.mem.Allocator,
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     if (opt.disabled) return;
 
     //TODO respect alloc setting
-    var box = try dvui.box(@src(), .horizontal, .{});
+    var box = try rui.box(@src(), .horizontal, .{});
     defer box.deinit();
 
-    try dvui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
+    try rui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
 
     const ProvidedPointerTreatment = enum {
         mutate_value_and_realloc,
@@ -269,43 +269,43 @@ fn textFieldWidget(
 
     switch (treatment) {
         .mutate_value_in_place_only => {
-            var hbox_aligned = try dvui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
+            var hbox_aligned = try rui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
             defer hbox_aligned.deinit();
             alignment.record(box.data().id, hbox_aligned.data());
 
-            const text_box = try dvui.textEntry(@src(), .{ .text = .{ .buffer = result.* } }, opt.dvui_opts);
+            const text_box = try rui.textEntry(@src(), .{ .text = .{ .buffer = result.* } }, opt.rui_opts);
             defer text_box.deinit();
         },
         .mutate_value_and_realloc => {
-            var hbox_aligned = try dvui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
+            var hbox_aligned = try rui.box(@src(), .horizontal, .{ .margin = alignment.margin(box.data().id) });
             defer hbox_aligned.deinit();
             alignment.record(box.data().id, hbox_aligned.data());
 
-            const text_box = try dvui.textEntry(@src(), .{ .text = .{ .buffer_dynamic = .{
+            const text_box = try rui.textEntry(@src(), .{ .text = .{ .buffer_dynamic = .{
                 .allocator = allocator.?,
                 .backing = result,
-            } } }, opt.dvui_opts);
+            } } }, opt.rui_opts);
             defer text_box.deinit();
         },
         .display_only => {
-            try dvui.label(@src(), " : {s}", .{result.*}, .{});
+            try rui.label(@src(), " : {s}", .{result.*}, .{});
         },
         .copy_value_and_alloc_new => {
             //TODO
-            try dvui.label(@src(), " : TODO {s}", .{result.*}, .{});
-            //var memory_handle = dvui.dataGet(null, box.widget().data().id, "memory_handle", []u8);
+            try rui.label(@src(), " : TODO {s}", .{result.*}, .{});
+            //var memory_handle = rui.dataGet(null, box.widget().data().id, "memory_handle", []u8);
             //if (memory_handle == null) {
             //    const len = @max(64, result.*.len * 2);
             //    const memory = try allocator.?.alloc(u8, len);
             //    @memset(memory, 0);
             //    std.mem.copyForwards(u8, memory, result.*);
-            //    dvui.dataSet(null, box.widget().data().id, "memory_handle", memory);
+            //    rui.dataSet(null, box.widget().data().id, "memory_handle", memory);
             //    memory_handle = memory;
             //}
 
             ////WARNING: this could leak memory if result has been dynamically allocated
             //result.* = memory_handle.?;
-            //const text_box = try dvui.textEntry(@src(), .{ .text = .{ .buffer = memory_handle.? } }, opt.dvui_opts);
+            //const text_box = try rui.textEntry(@src(), .{ .text = .{ .buffer = memory_handle.? } }, opt.rui_opts);
             //text_box.deinit();
         },
     }
@@ -335,9 +335,9 @@ pub fn unionFieldWidget(
     opt: UnionFieldOptions(T),
     comptime alloc: bool,
     allocator: ?std.mem.Allocator,
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
-    var box = try dvui.box(@src(), .vertical, .{});
+    var box = try rui.box(@src(), .vertical, .{});
     defer box.deinit();
 
     const FieldEnum = std.meta.FieldEnum(T);
@@ -346,17 +346,17 @@ pub fn unionFieldWidget(
     var choice: usize = @intFromEnum(std.meta.activeTag(result.*));
 
     {
-        var hbox = try dvui.box(@src(), .vertical, .{});
+        var hbox = try rui.box(@src(), .vertical, .{});
         defer hbox.deinit();
         const label = opt.label_override orelse name;
         if (label.len != 0) {
-            try dvui.label(@src(), "{s}", .{label}, .{
+            try rui.label(@src(), "{s}", .{label}, .{
                 .border = border,
                 .background = true,
             });
         }
         inline for (entries, 0..) |field_name, i| {
-            if (try dvui.radio(@src(), choice == i, field_name, .{ .id_extra = i })) {
+            if (try rui.radio(@src(), choice == i, field_name, .{ .id_extra = i })) {
                 choice = i;
             }
         }
@@ -369,9 +369,9 @@ pub fn unionFieldWidget(
             }
             const field_result: *field.type = &@field(result.*, field.name);
 
-            var hbox = try dvui.box(@src(), .horizontal, .{ .expand = .both });
+            var hbox = try rui.box(@src(), .horizontal, .{ .expand = .both });
             defer hbox.deinit();
-            var line = try dvui.box(@src(), .vertical, .{
+            var line = try rui.box(@src(), .vertical, .{
                 .border = border,
                 .expand = .vertical,
                 .background = true,
@@ -400,26 +400,26 @@ pub fn optionalFieldWidget(
     opt: OptionalFieldOptions(T),
     comptime alloc: bool,
     allocator: ?std.mem.Allocator,
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     if (opt.disabled) return;
-    var box = try dvui.box(@src(), .vertical, .{});
+    var box = try rui.box(@src(), .vertical, .{});
     defer box.deinit();
 
     const Child = @typeInfo(T).optional.child;
 
-    const checkbox_state = dvui.dataGetPtrDefault(null, box.widget().data().id, "checked", bool, false);
+    const checkbox_state = rui.dataGetPtrDefault(null, box.widget().data().id, "checked", bool, false);
     {
-        var hbox = try dvui.box(@src(), .horizontal, .{});
+        var hbox = try rui.box(@src(), .horizontal, .{});
         defer hbox.deinit();
-        try dvui.label(@src(), "{s}?", .{opt.label_override orelse name}, .{});
-        _ = try dvui.checkbox(@src(), checkbox_state, null, .{});
+        try rui.label(@src(), "{s}?", .{opt.label_override orelse name}, .{});
+        _ = try rui.checkbox(@src(), checkbox_state, null, .{});
     }
 
     if (checkbox_state.*) {
-        var hbox = try dvui.box(@src(), .horizontal, .{ .expand = .both });
+        var hbox = try rui.box(@src(), .horizontal, .{ .expand = .both });
         defer hbox.deinit();
-        var line = try dvui.box(@src(), .vertical, .{
+        var line = try rui.box(@src(), .vertical, .{
             .border = border,
             .expand = .vertical,
             .background = true,
@@ -453,7 +453,7 @@ pub fn pointerFieldWidget(
     opt: PointerFieldOptions(T),
     comptime alloc: bool,
     allocator: ?std.mem.Allocator,
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     const info = @typeInfo(T).pointer;
 
@@ -484,10 +484,10 @@ pub fn singlePointerFieldWidget(
     opt: SinglePointerFieldOptions(T),
     comptime alloc: bool,
     allocator: ?std.mem.Allocator,
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     if (opt.disabled) return;
-    var box = try dvui.box(@src(), .horizontal, .{});
+    var box = try rui.box(@src(), .horizontal, .{});
     defer box.deinit();
 
     const Child = @typeInfo(T).pointer.child;
@@ -513,17 +513,17 @@ pub fn singlePointerFieldWidget(
         }
     };
 
-    //try dvui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
+    //try rui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
     switch (treatment) {
         .display_only => {
-            try dvui.label(@src(), ": {any}", .{result.*.*}, .{});
+            try rui.label(@src(), ": {any}", .{result.*.*}, .{});
         },
         .mutate_value_in_place => {
             try fieldWidget(name, Child, result.*, opt.child, alloc, allocator, alignment);
         },
         .copy_value_and_alloc_new => {
             //TODO
-            try dvui.label(@src(), ": TODO {any}", .{result.*.*}, .{});
+            try rui.label(@src(), ": TODO {any}", .{result.*.*}, .{});
         },
     }
 }
@@ -545,7 +545,7 @@ pub fn arrayFieldWidget(
     opt: ArrayFieldOptions(T),
     comptime alloc: bool,
     allocator: ?std.mem.Allocator,
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     const SliceType = []@typeInfo(T).array.child;
     var slice_result: SliceType = &(result.*);
@@ -573,7 +573,7 @@ pub fn sliceFieldWidget(
     opt: SliceFieldOptions(T),
     comptime alloc: bool,
     allocator: ?std.mem.Allocator,
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     if (@typeInfo(T).pointer.size != .slice) @compileError("must be called with slice");
 
@@ -604,15 +604,15 @@ pub fn sliceFieldWidget(
     var removed_idx: ?usize = null;
     var insert_before_idx: ?usize = null;
 
-    var reorder = try dvui.reorder(@src(), .{
+    var reorder = try rui.reorder(@src(), .{
         .min_size_content = .{ .w = 120 },
         .background = true,
-        .border = dvui.Rect.all(1),
-        .padding = dvui.Rect.all(4),
+        .border = rui.Rect.all(1),
+        .padding = rui.Rect.all(4),
     });
 
-    var vbox = try dvui.box(@src(), .vertical, .{ .expand = .both });
-    try dvui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
+    var vbox = try rui.box(@src(), .vertical, .{ .expand = .both });
+    try rui.label(@src(), "{s}", .{opt.label_override orelse name}, .{});
 
     for (result.*, 0..) |_, i| {
         var reorderable = try reorder.reorderable(@src(), .{}, .{
@@ -627,9 +627,9 @@ pub fn sliceFieldWidget(
             insert_before_idx = i; // this entry was dropped onto
         }
 
-        var hbox = try dvui.box(@src(), .horizontal, .{
+        var hbox = try rui.box(@src(), .horizontal, .{
             .expand = .both,
-            .border = dvui.Rect.all(1),
+            .border = rui.Rect.all(1),
             .background = true,
             .color_fill = .{ .name = .fill_window },
         });
@@ -637,9 +637,9 @@ pub fn sliceFieldWidget(
 
         switch (treatment) {
             .mutate_value_in_place_only, .mutate_value_and_realloc => {
-                _ = try dvui.ReorderWidget.draggable(@src(), .{ .reorderable = reorderable }, .{
+                _ = try rui.ReorderWidget.draggable(@src(), .{ .reorderable = reorderable }, .{
                     .expand = .vertical,
-                    .min_size_content = dvui.Size.all(22),
+                    .min_size_content = rui.Size.all(22),
                     .gravity_y = 0.5,
                 });
             },
@@ -660,24 +660,24 @@ pub fn sliceFieldWidget(
     }
 
     // returns true if the slice was reordered
-    _ = dvui.ReorderWidget.reorderSlice(Child, result.*, removed_idx, insert_before_idx);
+    _ = rui.ReorderWidget.reorderSlice(Child, result.*, removed_idx, insert_before_idx);
 
     //if (alloc) {
     switch (treatment) {
         .mutate_value_and_realloc => {
-            const new_item: *Child = dvui.dataGetPtrDefault(null, reorder.data().id, "new_item", Child, undefined);
+            const new_item: *Child = rui.dataGetPtrDefault(null, reorder.data().id, "new_item", Child, undefined);
 
-            _ = try dvui.spacer(@src(), .{ .h = 4 }, .{});
+            _ = try rui.spacer(@src(), .{ .h = 4 }, .{});
 
-            var hbox = try dvui.box(@src(), .horizontal, .{
+            var hbox = try rui.box(@src(), .horizontal, .{
                 .expand = .both,
-                .border = dvui.Rect.all(1),
+                .border = rui.Rect.all(1),
                 .background = true,
                 .color_fill = .{ .name = .fill_window },
             });
             defer hbox.deinit();
 
-            if (try dvui.button(@src(), "Add New", .{}, .{})) {
+            if (try rui.button(@src(), "Add New", .{}, .{})) {
                 //TODO realloc here with allocator parameter
             }
 
@@ -722,7 +722,7 @@ fn structFieldWidget(
     if (opt.disabled) return;
     const fields = @typeInfo(T).@"struct".fields;
 
-    var box = try dvui.box(@src(), .vertical, .{ .expand = .both });
+    var box = try rui.box(@src(), .vertical, .{ .expand = .both });
     defer box.deinit();
 
     const label = opt.label_override orelse name;
@@ -734,30 +734,30 @@ fn structFieldWidget(
         expand = true;
         separate = false;
     } else if (opt.use_expander) {
-        expand = try dvui.expander(@src(), label, .{}, .{});
+        expand = try rui.expander(@src(), label, .{}, .{});
         separate = expand;
     } else {
-        try dvui.label(@src(), "{s}", .{label}, .{});
+        try rui.label(@src(), "{s}", .{label}, .{});
         expand = true;
         separate = false;
     }
 
-    var hbox = try dvui.box(@src(), .horizontal, .{ .expand = .both });
+    var hbox = try rui.box(@src(), .horizontal, .{ .expand = .both });
     defer hbox.deinit();
 
     if (separate) {
-        try dvui.separator(@src(), .{
+        try rui.separator(@src(), .{
             .expand = .vertical,
             .min_size_content = .{ .w = 2 },
-            .margin = dvui.Rect.all(4),
+            .margin = rui.Rect.all(4),
         });
     }
 
     if (expand) {
-        var vbox = try dvui.box(@src(), .vertical, .{ .expand = .both });
+        var vbox = try rui.box(@src(), .vertical, .{ .expand = .both });
         defer vbox.deinit();
 
-        var left_alignment = dvui.Alignment.init();
+        var left_alignment = rui.Alignment.init();
         defer left_alignment.deinit();
 
         inline for (fields, 0..) |field, i| {
@@ -765,14 +765,14 @@ fn structFieldWidget(
             if (!options.disabled) {
                 const result_ptr = &@field(result.*, field.name);
 
-                var widgetbox = try dvui.box(@src(), .vertical, .{
+                var widgetbox = try rui.box(@src(), .vertical, .{
                     .expand = .both,
                     .id_extra = i,
                     //.margin = left_alignment.margin(hbox.data().id)
                 });
                 defer widgetbox.deinit();
 
-                //var hbox_aligned = try dvui.box(@src(), .horizontal, .{ .margin = left_alignment.margin(hbox.data().id) });
+                //var hbox_aligned = try rui.box(@src(), .horizontal, .{ .margin = left_alignment.margin(hbox.data().id) });
                 //defer hbox_aligned.deinit();
                 //left_alignment.record(hbox.data().id, hbox_aligned.data());
 
@@ -826,7 +826,7 @@ pub fn fieldWidget(
     options: FieldOptions(T),
     comptime alloc: bool,
     allocator: ?std.mem.Allocator,
-    alignment: *dvui.Alignment,
+    alignment: *rui.Alignment,
 ) !void {
     switch (@typeInfo(T)) {
         .int => try intFieldWidget(name, T, result, options, alignment),
@@ -850,9 +850,9 @@ pub fn structEntry(
     comptime src: std.builtin.SourceLocation,
     comptime T: type,
     result: *T,
-    opts: dvui.Options,
+    opts: rui.Options,
 ) !void {
-    var box = try dvui.box(src, .vertical, opts);
+    var box = try rui.box(src, .vertical, opts);
     defer box.deinit();
     try structFieldWidget("", T, result, .{}, false, null);
 }
@@ -864,7 +864,7 @@ pub fn structEntryEx(
     result: *T,
     field_options: StructFieldOptions(T),
 ) !void {
-    var box = try dvui.box(src, .vertical, .{ .expand = .both });
+    var box = try rui.box(src, .vertical, .{ .expand = .both });
     defer box.deinit();
     try structFieldWidget(name, T, result, field_options, false, null);
 }
@@ -874,9 +874,9 @@ pub fn structEntryAlloc(
     allocator: std.mem.Allocator,
     comptime T: type,
     result: *T,
-    opts: dvui.Options,
+    opts: rui.Options,
 ) !void {
-    var box = try dvui.box(src, .vertical, opts);
+    var box = try rui.box(src, .vertical, opts);
     defer box.deinit();
     try structFieldWidget("", T, result, .{}, true, allocator);
 }
@@ -889,7 +889,7 @@ pub fn structEntryExAlloc(
     result: *T,
     field_options: StructFieldOptions(T),
 ) !void {
-    var box = try dvui.box(src, .vertical, .{ .expand = .both });
+    var box = try rui.box(src, .vertical, .{ .expand = .both });
     defer box.deinit();
     try structFieldWidget(name, T, result, field_options, true, allocator);
 }

@@ -14,7 +14,7 @@ pub var defaults: Options = .{
 };
 
 pub const InitOptions = struct {
-    dir: dvui.enums.Direction = .horizontal,
+    dir: rui.enums.Direction = .horizontal,
 };
 
 pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Options) TabsWidget {
@@ -43,20 +43,20 @@ pub fn install(self: *TabsWidget) !void {
     var r = self.scroll.data().contentRectScale().r;
     switch (self.init_options.dir) {
         .horizontal => {
-            if (dvui.currentWindow().snap_to_pixels) {
+            if (rui.currentWindow().snap_to_pixels) {
                 r.x += 0.5;
                 r.w -= 1.0;
                 r.y = @floor(r.y) - 0.5;
             }
-            try dvui.pathStroke(&.{ r.bottomLeft(), r.bottomRight() }, 1, dvui.themeGet().color_border, .{});
+            try rui.pathStroke(&.{ r.bottomLeft(), r.bottomRight() }, 1, rui.themeGet().color_border, .{});
         },
         .vertical => {
-            if (dvui.currentWindow().snap_to_pixels) {
+            if (rui.currentWindow().snap_to_pixels) {
                 r.y += 0.5;
                 r.h -= 1.0;
                 r.x = @floor(r.x) - 0.5;
             }
-            try dvui.pathStroke(&.{ r.topRight(), r.bottomRight() }, 1, dvui.themeGet().color_border, .{});
+            try rui.pathStroke(&.{ r.topRight(), r.bottomRight() }, 1, rui.themeGet().color_border, .{});
         },
     }
 }
@@ -66,11 +66,11 @@ pub fn addTabLabel(self: *TabsWidget, selected: bool, text: []const u8) !bool {
     defer tab.deinit();
 
     var label_opts = tab.data().options.strip();
-    if (dvui.captured(tab.data().id)) {
+    if (rui.captured(tab.data().id)) {
         label_opts.color_text = .{ .name = .text_press };
     }
 
-    try dvui.labelNoFmt(@src(), text, label_opts);
+    try rui.labelNoFmt(@src(), text, label_opts);
 
     return tab.clicked();
 }
@@ -116,36 +116,36 @@ pub fn addTab(self: *TabsWidget, selected: bool, opts: Options) !*ButtonWidget {
 
         switch (self.init_options.dir) {
             .horizontal => {
-                var path: std.ArrayList(Point) = .init(dvui.currentWindow().arena());
+                var path: std.ArrayList(Point) = .init(rui.currentWindow().arena());
                 defer path.deinit();
 
                 try path.append(rs.r.bottomRight());
 
                 const tr = Point{ .x = rs.r.x + rs.r.w - cr.y, .y = rs.r.y + cr.y };
-                try dvui.pathAddArc(&path, tr, cr.y, math.pi * 2.0, math.pi * 1.5, false);
+                try rui.pathAddArc(&path, tr, cr.y, math.pi * 2.0, math.pi * 1.5, false);
 
                 const tl = Point{ .x = rs.r.x + cr.x, .y = rs.r.y + cr.x };
-                try dvui.pathAddArc(&path, tl, cr.x, math.pi * 1.5, math.pi, false);
+                try rui.pathAddArc(&path, tl, cr.x, math.pi * 1.5, math.pi, false);
 
                 try path.append(rs.r.bottomLeft());
 
-                try dvui.pathStroke(path.items, 2 * rs.s, self.options.color(.accent), .{ .after = true });
+                try rui.pathStroke(path.items, 2 * rs.s, self.options.color(.accent), .{ .after = true });
             },
             .vertical => {
-                var path: std.ArrayList(Point) = .init(dvui.currentWindow().arena());
+                var path: std.ArrayList(Point) = .init(rui.currentWindow().arena());
                 defer path.deinit();
 
                 try path.append(rs.r.topRight());
 
                 const tl = Point{ .x = rs.r.x + cr.x, .y = rs.r.y + cr.x };
-                try dvui.pathAddArc(&path, tl, cr.x, math.pi * 1.5, math.pi, false);
+                try rui.pathAddArc(&path, tl, cr.x, math.pi * 1.5, math.pi, false);
 
                 const bl = Point{ .x = rs.r.x + cr.h, .y = rs.r.y + rs.r.h - cr.h };
-                try dvui.pathAddArc(&path, bl, cr.h, math.pi, math.pi * 0.5, false);
+                try rui.pathAddArc(&path, bl, cr.h, math.pi, math.pi * 0.5, false);
 
                 try path.append(rs.r.bottomRight());
 
-                try dvui.pathStroke(path.items, 2 * rs.s, self.options.color(.accent), .{ .after = true });
+                try rui.pathStroke(path.items, 2 * rs.s, self.options.color(.accent), .{ .after = true });
             },
         }
     }
@@ -158,17 +158,17 @@ pub fn deinit(self: *TabsWidget) void {
     self.scroll.deinit();
 }
 
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const Point = dvui.Point;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const Point = rui.Point;
 
-const BoxWidget = dvui.BoxWidget;
-const ButtonWidget = dvui.ButtonWidget;
-const ScrollAreaWidget = dvui.ScrollAreaWidget;
+const BoxWidget = rui.BoxWidget;
+const ButtonWidget = rui.ButtonWidget;
+const ScrollAreaWidget = rui.ScrollAreaWidget;
 
 const std = @import("std");
 const math = std.math;
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
 test {
     @import("std").testing.refAllDecls(@This());

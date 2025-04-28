@@ -1,11 +1,11 @@
 const std = @import("std");
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
-const Point = dvui.Point;
-const Rect = dvui.Rect;
-const Size = dvui.Size;
+const Point = rui.Point;
+const Rect = rui.Rect;
+const Size = rui.Size;
 
-const enums = dvui.enums;
+const enums = rui.enums;
 
 const ScrollInfo = @This();
 

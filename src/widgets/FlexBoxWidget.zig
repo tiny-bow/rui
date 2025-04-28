@@ -1,12 +1,12 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
 
 const FlexBoxWidget = @This();
 
@@ -20,7 +20,7 @@ pub const ContentPosition = enum { start, center };
 wd: WidgetData = undefined,
 init_options: InitOptions = undefined,
 prevClip: Rect = Rect{},
-insert_pt: dvui.Point = .{},
+insert_pt: rui.Point = .{},
 row_size: Size = .{},
 max_row_width: f32 = 0.0,
 max_row_width_prev: f32 = 0.0,
@@ -31,22 +31,22 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
     const defaults = Options{ .name = "FlexBox" };
     self.wd = WidgetData.init(src, .{}, defaults.override(opts));
     self.init_options = init_opts;
-    self.max_row_width_prev = dvui.dataGet(null, self.wd.id, "_mrw", f32) orelse 0.0;
+    self.max_row_width_prev = rui.dataGet(null, self.wd.id, "_mrw", f32) orelse 0.0;
     return self;
 }
 
 pub fn install(self: *FlexBoxWidget) !void {
     try self.wd.register();
-    dvui.parentSet(self.widget());
+    rui.parentSet(self.widget());
 
-    self.prevClip = dvui.clip(self.wd.contentRectScale().r);
+    self.prevClip = rui.clip(self.wd.contentRectScale().r);
 }
 
 pub fn drawBackground(self: *FlexBoxWidget) !void {
-    const clip = dvui.clipGet();
-    dvui.clipSet(self.prevClip);
+    const clip = rui.clipGet();
+    rui.clipSet(self.prevClip);
     try self.wd.borderAndBackground(.{});
-    dvui.clipSet(clip);
+    rui.clipSet(clip);
 }
 
 pub fn widget(self: *FlexBoxWidget) Widget {
@@ -106,7 +106,7 @@ pub fn minSizeForChild(self: *FlexBoxWidget, s: Size) void {
     self.wd.min_size = self.wd.options.padSize(.{ .w = self.width_nobreak, .h = self.insert_pt.y + self.row_size.h });
 }
 
-pub fn processEvent(self: *FlexBoxWidget, e: *dvui.Event, bubbling: bool) void {
+pub fn processEvent(self: *FlexBoxWidget, e: *rui.Event, bubbling: bool) void {
     _ = bubbling;
     if (e.bubbleable()) {
         self.wd.parent.processEvent(e, true);
@@ -114,11 +114,11 @@ pub fn processEvent(self: *FlexBoxWidget, e: *dvui.Event, bubbling: bool) void {
 }
 
 pub fn deinit(self: *FlexBoxWidget) void {
-    dvui.dataSet(null, self.wd.id, "_mrw", self.max_row_width);
-    dvui.clipSet(self.prevClip);
+    rui.dataSet(null, self.wd.id, "_mrw", self.max_row_width);
+    rui.clipSet(self.prevClip);
     self.wd.minSizeSetAndRefresh();
     self.wd.minSizeReportToParent();
-    dvui.parentReset(self.wd.id, self.wd.parent);
+    rui.parentReset(self.wd.id, self.wd.parent);
 }
 
 test {

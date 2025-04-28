@@ -1,7 +1,7 @@
 /**
  * @param {number} ms Number of milliseconds to sleep
  */
-async function dvui_sleep(ms) {
+async function rui_sleep(ms) {
     await new Promise((r) => setTimeout(r, ms));
 }
 
@@ -9,10 +9,10 @@ async function dvui_sleep(ms) {
  * @param {string} url
  * @returns {Uint8Array}
  */
-async function dvui_fetch(url) {
+async function rui_fetch(url) {
     let x = await fetch(url);
     let blob = await x.blob();
-    //console.log("dvui_fetch: " + blob.size);
+    //console.log("rui_fetch: " + blob.size);
     return new Uint8Array(await blob.arrayBuffer());
 }
 
@@ -21,7 +21,7 @@ async function dvui_fetch(url) {
  * @param {boolean} multiple
  * @returns {Promise<FileList>}
  */
-async function dvui_open_file_picker(accept, multiple) {
+async function rui_open_file_picker(accept, multiple) {
     return new Promise((res, rej) => {
         const file_input = document.createElement("input");
         file_input.setAttribute("type", "file");
@@ -133,20 +133,20 @@ const fragmentShaderSource_webgl2 = `# version 300 es
  * @param {string} canvasId
  * @param {string} wasmFile The url to the wasm file, to be used in `fetch`
  */
-function dvui(canvasId, wasmFile) {
-    const dvui = new Dvui();
-    WebAssembly.instantiateStreaming(fetch(wasmFile), { dvui: dvui.imports })
+function rui(canvasId, wasmFile) {
+    const rui = new rui();
+    WebAssembly.instantiateStreaming(fetch(wasmFile), { rui: rui.imports })
         .then((result) => {
-            dvui.setInstance(result.instance);
-            dvui.setCanvas(canvasId);
-            dvui.run();
+            rui.setInstance(result.instance);
+            rui.setCanvas(canvasId);
+            rui.run();
         });
 }
 
 const utf8decoder = new TextDecoder();
 const utf8encoder = new TextEncoder();
 
-class Dvui {
+class rui {
     /** @type {WebGL2RenderingContext | WebGLRenderingContext} */
     gl;
     /** @type {WebGLBuffer} */
@@ -276,7 +276,7 @@ class Dvui {
                 return performance.now();
             },
             wasm_sleep: (ms) => {
-                dvui_sleep(ms);
+                rui_sleep(ms);
             },
             wasm_pixel_width: () => {
                 return this.gl.drawingBufferWidth;
@@ -754,7 +754,7 @@ class Dvui {
                     ),
                 );
                 // console.log("Open picker", accept_ptr, accept_len, accept, multiple);
-                dvui_open_file_picker(accept, multiple).then((filelist) => {
+                rui_open_file_picker(accept, multiple).then((filelist) => {
                     let files = [];
                     let data = [];
                     for (let i = 0; i < filelist.length; i++) {
@@ -768,7 +768,7 @@ class Dvui {
                     });
                 }).catch(() =>
                     console.debug(
-                        "Filepicker canceled: This is currently not detectable from within dvui",
+                        "Filepicker canceled: This is currently not detectable from within rui",
                     )
                 );
             },
@@ -834,7 +834,7 @@ class Dvui {
                 }
             },
             wasm_add_noto_font: () => {
-                dvui_fetch("NotoSansKR-Regular.ttf").then((bytes) => {
+                rui_fetch("NotoSansKR-Regular.ttf").then((bytes) => {
                     //console.log("bytes len " + bytes.length);
                     const ptr = this.instance.exports.gpa_u8(
                         bytes.length,
@@ -990,7 +990,7 @@ class Dvui {
     }
 
     init() {
-        let dvui_init_return = 0;
+        let rui_init_return = 0;
         let str = utf8encoder.encode(navigator.platform);
         if (str.length > 0) {
             const ptr = this.instance.exports.gpa_u8(
@@ -1002,20 +1002,20 @@ class Dvui {
                 str.length,
             );
             dest.set(str);
-            dvui_init_return = this.instance.exports.dvui_init(
+            rui_init_return = this.instance.exports.rui_init(
                 ptr,
                 str.length,
             );
             this.instance.exports.gpa_free(ptr, str.length);
         } else {
-            dvui_init_return = this.instance.exports.dvui_init(
+            rui_init_return = this.instance.exports.rui_init(
                 0,
                 0,
             );
         }
 
-        if (dvui_init_return != 0) {
-            throw new Error("ERROR: dvui_init returned " + dvui_init_return);
+        if (rui_init_return != 0) {
+            throw new Error("ERROR: rui_init returned " + rui_init_return);
         }
     }
 
@@ -1066,7 +1066,7 @@ class Dvui {
             this.gl.clearColor(0.0, 0.0, 0.0, 1.0); // Clear to black, fully opaque
             this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
-            let millis_to_wait = this.instance.exports.dvui_update();
+            let millis_to_wait = this.instance.exports.rui_update();
 
             if (!this.filesCacheModified) {
                 // Only clear if we didn't add anything this frame. Async could add items after they were requested
@@ -1097,7 +1097,7 @@ class Dvui {
             if (!renderRequested) {
                 // multiple events could call requestRender multiple times, and
                 // we only want a single requestAnimationFrame to happen before
-                // each call to dvui_update
+                // each call to rui_update
                 renderRequested = true;
                 requestAnimationFrame(render);
             }

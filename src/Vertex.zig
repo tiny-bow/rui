@@ -1,7 +1,7 @@
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
-const Point = dvui.Point;
-const Color = dvui.Color;
+const Point = rui.Point;
+const Color = rui.Color;
 
 pos: Point,
 col: Color,

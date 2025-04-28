@@ -1,17 +1,17 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const ScrollInfo = dvui.ScrollInfo;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
-const BoxWidget = dvui.BoxWidget;
-const ScrollBarWidget = dvui.ScrollBarWidget;
-const ScrollContainerWidget = dvui.ScrollContainerWidget;
+const Event = rui.Event;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const ScrollInfo = rui.ScrollInfo;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
+const BoxWidget = rui.BoxWidget;
+const ScrollBarWidget = rui.ScrollBarWidget;
+const ScrollContainerWidget = rui.ScrollContainerWidget;
 
 const ScrollAreaWidget = @This();
 
@@ -57,12 +57,12 @@ pub fn install(self: *ScrollAreaWidget) !void {
     if (self.init_opts.scroll_info) |si| {
         self.si = si;
         if (self.init_opts.vertical != null) {
-            dvui.log.debug("ScrollAreaWidget {x} init_opts.vertical .{s} overridden by init_opts.scroll_info.vertical .{s}\n", .{ self.hbox.wd.id, @tagName(self.init_opts.vertical.?), @tagName(si.vertical) });
+            rui.log.debug("ScrollAreaWidget {x} init_opts.vertical .{s} overridden by init_opts.scroll_info.vertical .{s}\n", .{ self.hbox.wd.id, @tagName(self.init_opts.vertical.?), @tagName(si.vertical) });
         }
         if (self.init_opts.horizontal != null) {
-            dvui.log.debug("ScrollAreaWidget {x} init_opts.horizontal .{s} overridden by init_opts.scroll_info.horizontal .{s}\n", .{ self.hbox.wd.id, @tagName(self.init_opts.horizontal.?), @tagName(si.horizontal) });
+            rui.log.debug("ScrollAreaWidget {x} init_opts.horizontal .{s} overridden by init_opts.scroll_info.horizontal .{s}\n", .{ self.hbox.wd.id, @tagName(self.init_opts.horizontal.?), @tagName(si.horizontal) });
         }
-    } else if (dvui.dataGet(null, self.hbox.data().id, "_scroll_info", ScrollInfo)) |si| {
+    } else if (rui.dataGet(null, self.hbox.data().id, "_scroll_info", ScrollInfo)) |si| {
         self.si_store = si;
         self.si = &self.si_store; // can't take pointer to self in init, so we do it in install
 
@@ -84,7 +84,7 @@ pub fn install(self: *ScrollAreaWidget) !void {
     self.si.viewport.w = crect.w;
     self.si.viewport.h = crect.h;
 
-    const focus_target = self.init_opts.focus_id orelse dvui.dataGet(null, self.hbox.data().id, "_scroll_id", u32);
+    const focus_target = self.init_opts.focus_id orelse rui.dataGet(null, self.hbox.data().id, "_scroll_id", u32);
 
     // due to floating point inaccuracies, give ourselves a tiny bit of extra wiggle room
 
@@ -144,7 +144,7 @@ pub fn data(self: *ScrollAreaWidget) *WidgetData {
 }
 
 pub fn deinit(self: *ScrollAreaWidget) void {
-    dvui.dataSet(null, self.hbox.data().id, "_scroll_id", self.scroll.wd.id);
+    rui.dataSet(null, self.hbox.data().id, "_scroll_id", self.scroll.wd.id);
     self.scroll.deinit();
 
     if (self.hbar) |*hbar| {
@@ -157,7 +157,7 @@ pub fn deinit(self: *ScrollAreaWidget) void {
         vbar.deinit();
     }
 
-    dvui.dataSet(null, self.hbox.data().id, "_scroll_info", self.si.*);
+    rui.dataSet(null, self.hbox.data().id, "_scroll_info", self.si.*);
 
     self.hbox.deinit();
 }

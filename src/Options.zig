@@ -1,11 +1,11 @@
 const std = @import("std");
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
-const Color = dvui.Color;
-const Font = dvui.Font;
-const Rect = dvui.Rect;
-const Size = dvui.Size;
-const Theme = dvui.Theme;
+const Color = rui.Color;
+const Font = rui.Font;
+const Rect = rui.Rect;
+const Size = rui.Size;
+const Theme = rui.Theme;
 
 const Options = @This();
 
@@ -167,21 +167,21 @@ pub fn color(self: *const Options, ask: ColorAsk) Color {
 
             .name => |from_theme| switch (from_theme) {
                 // named color, get from theme
-                .accent => break :blk dvui.themeGet().color_accent,
-                .err => break :blk dvui.themeGet().color_err,
-                .text => break :blk dvui.themeGet().color_text,
-                .text_press => break :blk dvui.themeGet().color_text_press,
-                .fill => break :blk dvui.themeGet().color_fill,
-                .fill_window => break :blk dvui.themeGet().color_fill_window,
-                .fill_control => break :blk dvui.themeGet().color_fill_control,
-                .fill_hover => break :blk dvui.themeGet().color_fill_hover,
-                .fill_press => break :blk dvui.themeGet().color_fill_press,
-                .border => break :blk dvui.themeGet().color_border,
+                .accent => break :blk rui.themeGet().color_accent,
+                .err => break :blk rui.themeGet().color_err,
+                .text => break :blk rui.themeGet().color_text,
+                .text_press => break :blk rui.themeGet().color_text_press,
+                .fill => break :blk rui.themeGet().color_fill,
+                .fill_window => break :blk rui.themeGet().color_fill_window,
+                .fill_control => break :blk rui.themeGet().color_fill_control,
+                .fill_hover => break :blk rui.themeGet().color_fill_hover,
+                .fill_press => break :blk rui.themeGet().color_fill_press,
+                .border => break :blk rui.themeGet().color_border,
             },
         }
     };
 
-    return col.transparent(dvui.themeGet().alpha);
+    return col.transparent(rui.themeGet().alpha);
 }
 
 pub fn fontGet(self: *const Options) Font {
@@ -190,15 +190,15 @@ pub fn fontGet(self: *const Options) Font {
     }
 
     return switch (self.font_style orelse .body) {
-        .body => dvui.themeGet().font_body,
-        .heading => dvui.themeGet().font_heading,
-        .caption => dvui.themeGet().font_caption,
-        .caption_heading => dvui.themeGet().font_caption_heading,
-        .title => dvui.themeGet().font_title,
-        .title_1 => dvui.themeGet().font_title_1,
-        .title_2 => dvui.themeGet().font_title_2,
-        .title_3 => dvui.themeGet().font_title_3,
-        .title_4 => dvui.themeGet().font_title_4,
+        .body => rui.themeGet().font_body,
+        .heading => rui.themeGet().font_heading,
+        .caption => rui.themeGet().font_caption,
+        .caption_heading => rui.themeGet().font_caption_heading,
+        .title => rui.themeGet().font_title,
+        .title_1 => rui.themeGet().font_title_1,
+        .title_2 => rui.themeGet().font_title_2,
+        .title_3 => rui.themeGet().font_title_3,
+        .title_4 => rui.themeGet().font_title_4,
     };
 }
 

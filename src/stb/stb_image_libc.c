@@ -1,29 +1,29 @@
 
 #include <stddef.h>
 
-extern void *dvui_c_alloc(size_t size);
-#define STBI_MALLOC(sz) dvui_c_alloc(sz)
-#define STBIW_MALLOC(sz) dvui_c_alloc(sz)
+extern void *rui_c_alloc(size_t size);
+#define STBI_MALLOC(sz) rui_c_alloc(sz)
+#define STBIW_MALLOC(sz) rui_c_alloc(sz)
 
-extern void dvui_c_free(void *ptr);
-#define STBI_FREE(p) dvui_c_free(p)
-#define STBIW_FREE(p) dvui_c_free(p)
+extern void rui_c_free(void *ptr);
+#define STBI_FREE(p) rui_c_free(p)
+#define STBIW_FREE(p) rui_c_free(p)
 
-extern void *dvui_c_realloc_sized(void *ptr, size_t oldsize, size_t newsize);
-#define STBI_REALLOC_SIZED(p,oldsz,newsz) dvui_c_realloc_sized(p,oldsz,newsz)
-#define STBIW_REALLOC_SIZED(p,oldsz,newsz) dvui_c_realloc_sized(p,oldsz,newsz)
+extern void *rui_c_realloc_sized(void *ptr, size_t oldsize, size_t newsize);
+#define STBI_REALLOC_SIZED(p,oldsz,newsz) rui_c_realloc_sized(p,oldsz,newsz)
+#define STBIW_REALLOC_SIZED(p,oldsz,newsz) rui_c_realloc_sized(p,oldsz,newsz)
 
-extern void dvui_c_panic(char const *msg);
+extern void rui_c_panic(char const *msg);
 #define STBI_ASSERT(_Assertion)                         \
   do {                                                  \
     if ((_Assertion) == 0)                              \
-      dvui_c_panic("Assertion " #_Assertion " failed!"); \
+      rui_c_panic("Assertion " #_Assertion " failed!"); \
   } while (0)
 
 #define STBIW_ASSERT(_Assertion)                         \
   do {                                                  \
     if ((_Assertion) == 0)                              \
-      dvui_c_panic("Assertion " #_Assertion " failed!"); \
+      rui_c_panic("Assertion " #_Assertion " failed!"); \
   } while (0)
 
 static int strcmp(const char *l, const char *r)
@@ -45,21 +45,21 @@ static int abs(int a)
 	return a>0 ? a : -a;
 }
 
-extern double dvui_c_pow(double x, double y);
+extern double rui_c_pow(double x, double y);
 static double pow(double x, double y)
 {
-    return dvui_c_pow(x, y);
+    return rui_c_pow(x, y);
 }
 
-extern void *dvui_c_memset(void *dest, int x, size_t n);
+extern void *rui_c_memset(void *dest, int x, size_t n);
 static void *memset(void * dest, int x, size_t n) {
-	return dvui_c_memset(dest, x, n);
+	return rui_c_memset(dest, x, n);
 }
 
-extern void *dvui_c_memcpy(void *dest, const void * src, size_t n);
+extern void *rui_c_memcpy(void *dest, const void * src, size_t n);
 static void *memcpy(void * dest, const void * src, size_t n) {
-	return dvui_c_memcpy(dest, src, n);
+	return rui_c_memcpy(dest, src, n);
 }
 
-extern void *dvui_c_memmove(void *dest, const void * src, size_t n);
-#define STBIW_MEMMOVE(dest, src, n) dvui_c_memmove(dest, src, n)
+extern void *rui_c_memmove(void *dest, const void * src, size_t n);
+#define STBIW_MEMMOVE(dest, src, n) rui_c_memmove(dest, src, n)

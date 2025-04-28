@@ -1,8 +1,8 @@
 const std = @import("std");
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
-const Point = dvui.Point;
-const Size = dvui.Size;
+const Point = rui.Point;
+const Size = rui.Size;
 
 const Rect = @This();
 
@@ -19,15 +19,15 @@ h: f32 = 0,
 /// - w is bottom-right corner
 /// - h is bottom-left corner
 ///
-/// Only valid between dvui.Window.begin() and end().
-pub fn stroke(self: Rect, radius: Rect, thickness: f32, color: dvui.Color, opts: dvui.PathStrokeOptions) !void {
-    var path: std.ArrayList(dvui.Point) = .init(dvui.currentWindow().arena());
+/// Only valid between rui.Window.begin() and end().
+pub fn stroke(self: Rect, radius: Rect, thickness: f32, color: rui.Color, opts: rui.PathStrokeOptions) !void {
+    var path: std.ArrayList(rui.Point) = .init(rui.currentWindow().arena());
     defer path.deinit();
 
-    try dvui.pathAddRect(&path, self, radius);
+    try rui.pathAddRect(&path, self, radius);
     var options = opts;
     options.closed = true;
-    try dvui.pathStroke(path.items, thickness, color, options);
+    try rui.pathStroke(path.items, thickness, color, options);
 }
 
 /// Fill a rounded rect.
@@ -38,13 +38,13 @@ pub fn stroke(self: Rect, radius: Rect, thickness: f32, color: dvui.Color, opts:
 /// - w is bottom-right corner
 /// - h is bottom-left corner
 ///
-/// Only valid between dvui.Window.begin() and end().
-pub fn fill(self: Rect, radius: Rect, color: dvui.Color) !void {
-    var path: std.ArrayList(dvui.Point) = .init(dvui.currentWindow().arena());
+/// Only valid between rui.Window.begin() and end().
+pub fn fill(self: Rect, radius: Rect, color: rui.Color) !void {
+    var path: std.ArrayList(rui.Point) = .init(rui.currentWindow().arena());
     defer path.deinit();
 
-    try dvui.pathAddRect(&path, self, radius);
-    try dvui.pathFillConvex(path.items, color);
+    try rui.pathAddRect(&path, self, radius);
+    try rui.pathFillConvex(path.items, color);
 }
 
 pub fn equals(self: *const Rect, r: Rect) bool {
@@ -203,19 +203,19 @@ test scale {
 }
 
 test "Rect-scale.png" {
-    var t = try dvui.testing.init(.{ .window_size = .all(250) });
+    var t = try rui.testing.init(.{ .window_size = .all(250) });
     defer t.deinit();
 
     const frame = struct {
-        fn frame() !dvui.App.Result {
+        fn frame() !rui.App.Result {
             // NOTE: Should be kept up to date with the doctest
             const rect = Rect{ .x = 50, .y = 50, .w = 150, .h = 150 };
             const res = rect.scale(0.5);
             try std.testing.expectEqualDeep(Rect{ .x = 25, .y = 25, .w = 75, .h = 75 }, res);
 
-            var box = try dvui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
+            var box = try rui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
             defer box.deinit();
-            try rect.stroke(.{}, 1, dvui.Color.black.transparent(0.5), .{ .closed = true });
+            try rect.stroke(.{}, 1, rui.Color.black.transparent(0.5), .{ .closed = true });
             try res.stroke(.{}, 1, .{ .r = 0xff, .g = 0, .b = 0 }, .{ .closed = true });
             return .ok;
         }
@@ -231,19 +231,19 @@ test offset {
 }
 
 test "Rect-offset.png" {
-    var t = try dvui.testing.init(.{ .window_size = .all(250) });
+    var t = try rui.testing.init(.{ .window_size = .all(250) });
     defer t.deinit();
 
     const frame = struct {
-        fn frame() !dvui.App.Result {
+        fn frame() !rui.App.Result {
             // NOTE: Should be kept up to date with the doctest
             const rect = Rect{ .x = 50, .y = 50, .w = 100, .h = 100 };
             const res = rect.offset(.{ .x = 50, .y = 50 }); // width and height does nothing
             try std.testing.expectEqualDeep(Rect{ .x = 100, .y = 100, .w = 100, .h = 100 }, res);
 
-            var box = try dvui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
+            var box = try rui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
             defer box.deinit();
-            try rect.stroke(.{}, 1, dvui.Color.black.transparent(0.5), .{ .closed = true });
+            try rect.stroke(.{}, 1, rui.Color.black.transparent(0.5), .{ .closed = true });
             try res.stroke(.{}, 1, .{ .r = 0xff, .g = 0, .b = 0 }, .{ .closed = true });
             return .ok;
         }
@@ -265,19 +265,19 @@ test offsetNegPoint {
 }
 
 test "Rect-offsetNegPoint.png" {
-    var t = try dvui.testing.init(.{ .window_size = .all(250) });
+    var t = try rui.testing.init(.{ .window_size = .all(250) });
     defer t.deinit();
 
     const frame = struct {
-        fn frame() !dvui.App.Result {
+        fn frame() !rui.App.Result {
             // NOTE: Should be kept up to date with the doctest
             const rect = Rect{ .x = 100, .y = 100, .w = 100, .h = 100 };
             const res = rect.offsetNegPoint(.{ .x = 50, .y = 50 });
             try std.testing.expectEqualDeep(Rect{ .x = 50, .y = 50, .w = 100, .h = 100 }, res);
 
-            var box = try dvui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
+            var box = try rui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
             defer box.deinit();
-            try rect.stroke(.{}, 1, dvui.Color.black.transparent(0.5), .{ .closed = true });
+            try rect.stroke(.{}, 1, rui.Color.black.transparent(0.5), .{ .closed = true });
             try res.stroke(.{}, 1, .{ .r = 0xff, .g = 0, .b = 0 }, .{ .closed = true });
             return .ok;
         }
@@ -295,11 +295,11 @@ test intersect {
 }
 
 test "Rect-intersect.png" {
-    var t = try dvui.testing.init(.{ .window_size = .all(250) });
+    var t = try rui.testing.init(.{ .window_size = .all(250) });
     defer t.deinit();
 
     const frame = struct {
-        fn frame() !dvui.App.Result {
+        fn frame() !rui.App.Result {
             // NOTE: Should be kept up to date with the doctest
             const a = Rect{ .x = 50, .y = 50, .w = 100, .h = 100 };
             const b = Rect{ .x = 100, .y = 100, .w = 100, .h = 100 };
@@ -307,10 +307,10 @@ test "Rect-intersect.png" {
             const ab = Rect.intersect(a, b);
             try std.testing.expectEqualDeep(Rect{ .x = 100, .y = 100, .w = 50, .h = 50 }, ab);
 
-            var box = try dvui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
+            var box = try rui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
             defer box.deinit();
-            try a.stroke(.{}, 1, dvui.Color.black.transparent(0.5), .{ .closed = true });
-            try b.stroke(.{}, 1, dvui.Color.black.transparent(0.5), .{ .closed = true });
+            try a.stroke(.{}, 1, rui.Color.black.transparent(0.5), .{ .closed = true });
+            try b.stroke(.{}, 1, rui.Color.black.transparent(0.5), .{ .closed = true });
             try ab.stroke(.{}, 1, .{ .r = 0xff, .g = 0, .b = 0 }, .{ .closed = true });
             return .ok;
         }
@@ -328,11 +328,11 @@ test unionWith {
 }
 
 test "Rect-unionWith.png" {
-    var t = try dvui.testing.init(.{ .window_size = .all(250) });
+    var t = try rui.testing.init(.{ .window_size = .all(250) });
     defer t.deinit();
 
     const frame = struct {
-        fn frame() !dvui.App.Result {
+        fn frame() !rui.App.Result {
             // NOTE: Should be kept up to date with the doctest
             const a = Rect{ .x = 50, .y = 50, .w = 100, .h = 100 };
             const b = Rect{ .x = 100, .y = 100, .w = 100, .h = 100 };
@@ -340,10 +340,10 @@ test "Rect-unionWith.png" {
             const ab = Rect.unionWith(a, b);
             try std.testing.expectEqualDeep(Rect{ .x = 50, .y = 50, .w = 150, .h = 150 }, ab);
 
-            var box = try dvui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
+            var box = try rui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
             defer box.deinit();
-            try a.stroke(.{}, 1, dvui.Color.black.transparent(0.5), .{ .closed = true });
-            try b.stroke(.{}, 1, dvui.Color.black.transparent(0.5), .{ .closed = true });
+            try a.stroke(.{}, 1, rui.Color.black.transparent(0.5), .{ .closed = true });
+            try b.stroke(.{}, 1, rui.Color.black.transparent(0.5), .{ .closed = true });
             try ab.stroke(.{}, 1, .{ .r = 0xff, .g = 0, .b = 0 }, .{ .closed = true });
             return .ok;
         }
@@ -358,19 +358,19 @@ test inset {
     try std.testing.expectEqualDeep(Rect{ .x = 100, .y = 100, .w = 75, .h = 75 }, res);
 }
 test "Rect-inset.png" {
-    var t = try dvui.testing.init(.{ .window_size = .all(250) });
+    var t = try rui.testing.init(.{ .window_size = .all(250) });
     defer t.deinit();
 
     const frame = struct {
-        fn frame() !dvui.App.Result {
+        fn frame() !rui.App.Result {
             // NOTE: Should be kept up to date with the doctest
             const rect = Rect{ .x = 50, .y = 50, .w = 150, .h = 150 };
             const res = rect.inset(.{ .x = 50, .y = 50, .w = 25, .h = 25 });
             try std.testing.expectEqualDeep(Rect{ .x = 100, .y = 100, .w = 75, .h = 75 }, res);
 
-            var box = try dvui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
+            var box = try rui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
             defer box.deinit();
-            try rect.stroke(.{}, 1, dvui.Color.black.transparent(0.5), .{ .closed = true });
+            try rect.stroke(.{}, 1, rui.Color.black.transparent(0.5), .{ .closed = true });
             try res.stroke(.{}, 1, .{ .r = 0xff, .g = 0, .b = 0 }, .{ .closed = true });
             return .ok;
         }
@@ -391,19 +391,19 @@ test outset {
     try std.testing.expectEqualDeep(Rect{ .x = 50, .y = 50, .w = 125, .h = 125 }, res);
 }
 test "Rect-outset.png" {
-    var t = try dvui.testing.init(.{ .window_size = .all(250) });
+    var t = try rui.testing.init(.{ .window_size = .all(250) });
     defer t.deinit();
 
     const frame = struct {
-        fn frame() !dvui.App.Result {
+        fn frame() !rui.App.Result {
             // NOTE: Should be kept up to date with the doctest
             const rect = Rect{ .x = 100, .y = 100, .w = 50, .h = 50 };
             const res = rect.outset(.{ .x = 50, .y = 50, .w = 25, .h = 25 });
             try std.testing.expectEqualDeep(Rect{ .x = 50, .y = 50, .w = 125, .h = 125 }, res);
 
-            var box = try dvui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
+            var box = try rui.box(@src(), .horizontal, .{ .background = true, .color_fill = .{ .name = .fill_window }, .expand = .both });
             defer box.deinit();
-            try rect.stroke(.{}, 1, dvui.Color.black.transparent(0.5), .{ .closed = true });
+            try rect.stroke(.{}, 1, rui.Color.black.transparent(0.5), .{ .closed = true });
             try res.stroke(.{}, 1, .{ .r = 0xff, .g = 0, .b = 0 }, .{ .closed = true });
             return .ok;
         }

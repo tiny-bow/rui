@@ -1,9 +1,9 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const dvui = @import("dvui");
+const rui = @import("rui");
 pub const win32 = @import("win32").everything;
 
-pub const kind: dvui.enums.Backend = .dx11;
+pub const kind: rui.enums.Backend = .dx11;
 
 pub const Dx11Backend = @This();
 pub const Context = *align(1) Dx11Backend;
@@ -17,7 +17,7 @@ const global = struct {
 pub const WindowState = struct {
     vsync: bool,
 
-    dvui_window: dvui.Window,
+    rui_window: rui.Window,
 
     device: *win32.ID3D11Device,
     device_context: *win32.ID3D11DeviceContext,
@@ -41,7 +41,7 @@ pub const WindowState = struct {
     arena: std.mem.Allocator = undefined,
 
     pub fn deinit(state: *WindowState) void {
-        state.dvui_window.deinit();
+        state.rui_window.deinit();
         if (state.render_target) |rt| {
             _ = rt.IUnknown.Release();
         }
@@ -52,11 +52,11 @@ pub const WindowState = struct {
     }
 };
 
-const DvuiKey = union(enum) {
+const ruiKey = union(enum) {
     /// A keyboard button press
-    keyboard_key: dvui.enums.Key,
+    keyboard_key: rui.enums.Key,
     /// A mouse button press
-    mouse_key: dvui.enums.Button,
+    mouse_key: rui.enums.Button,
     /// Mouse move event
     mouse_event: struct { x: i16, y: i16 },
     /// Mouse wheel scroll event
@@ -67,7 +67,7 @@ const DvuiKey = union(enum) {
 
 const KeyEvent = struct {
     /// The type of event emitted
-    target: DvuiKey,
+    target: ruiKey,
     /// What kind of action the event emitted
     action: enum { down, up, none },
 };
@@ -124,15 +124,15 @@ const DirectxOptions = struct {
 };
 
 pub const InitOptions = struct {
-    dvui_gpa: std.mem.Allocator,
+    rui_gpa: std.mem.Allocator,
     /// The allocator used for temporary allocations used during init()
     allocator: std.mem.Allocator,
     /// The initial size of the application window
-    size: ?dvui.Size = null,
+    size: ?rui.Size = null,
     /// Set the minimum size of the window
-    min_size: ?dvui.Size = null,
+    min_size: ?rui.Size = null,
     /// Set the maximum size of the window
-    max_size: ?dvui.Size = null,
+    max_size: ?rui.Size = null,
 
     vsync: bool,
 
@@ -190,7 +190,7 @@ const shader =
     \\}
 ;
 
-/// Sets the directx viewport to the internally used dvui.Size
+/// Sets the directx viewport to the internally used rui.Size
 /// Call this *after* setDimensions
 fn setViewport(state: *WindowState, width: f32, height: f32) void {
     var vp = win32.D3D11_VIEWPORT{
@@ -204,8 +204,8 @@ fn setViewport(state: *WindowState, width: f32, height: f32) void {
     state.device_context.RSSetViewports(1, @ptrCast(&vp));
 }
 
-pub fn getWindow(context: Context) *dvui.Window {
-    return &stateFromHwnd(hwndFromContext(context)).dvui_window;
+pub fn getWindow(context: Context) *rui.Window {
+    return &stateFromHwnd(hwndFromContext(context)).rui_window;
 }
 
 pub fn receivedClose(context: Context) bool {
@@ -270,7 +270,7 @@ pub fn initWindow(window_state: *WindowState, options: InitOptions) !Context {
     const create_args: CreateWindowArgs = .{
         .window_state = window_state,
         .vsync = options.vsync,
-        .dvui_gpa = options.dvui_gpa,
+        .rui_gpa = options.rui_gpa,
     };
     const hwnd = blk: {
         const wnd_title = try std.unicode.utf8ToUtf16LeAllocZ(options.allocator, options.title);
@@ -612,8 +612,8 @@ fn createBuffer(state: *WindowState, bind_type: anytype, comptime InitialType: t
     //}
 }
 
-// ############ Satisfy DVUI interfaces ############
-pub fn textureCreate(self: Context, pixels: [*]u8, width: u32, height: u32, ti: dvui.enums.TextureInterpolation) dvui.Texture {
+// ############ Satisfy rui interfaces ############
+pub fn textureCreate(self: Context, pixels: [*]u8, width: u32, height: u32, ti: rui.enums.TextureInterpolation) rui.Texture {
     _ = ti; // autofix
     const state = stateFromHwnd(hwndFromContext(self));
 
@@ -649,10 +649,10 @@ pub fn textureCreate(self: Context, pixels: [*]u8, width: u32, height: u32, ti: 
         @panic("couldn't create texture");
     }
 
-    return dvui.Texture{ .ptr = texture, .width = width, .height = height };
+    return rui.Texture{ .ptr = texture, .width = width, .height = height };
 }
 
-pub fn textureCreateTarget(self: Context, width: u32, height: u32, _: dvui.enums.TextureInterpolation) !dvui.TextureTarget {
+pub fn textureCreateTarget(self: Context, width: u32, height: u32, _: rui.enums.TextureInterpolation) !rui.TextureTarget {
     const state = stateFromHwnd(hwndFromContext(self));
 
     const texture_desc = win32.D3D11_TEXTURE2D_DESC{
@@ -679,7 +679,7 @@ pub fn textureCreateTarget(self: Context, width: u32, height: u32, _: dvui.enums
     return .{ .ptr = @ptrCast(texture), .width = width, .height = height };
 }
 
-pub fn textureReadTarget(self: Context, texture: dvui.TextureTarget, pixels_out: [*]u8) error{TextureRead}!void {
+pub fn textureReadTarget(self: Context, texture: rui.TextureTarget, pixels_out: [*]u8) error{TextureRead}!void {
     const state = stateFromHwnd(hwndFromContext(self));
     const tex: *win32.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
 
@@ -723,17 +723,17 @@ pub fn textureReadTarget(self: Context, texture: dvui.TextureTarget, pixels_out:
     }
 }
 
-pub fn textureDestroy(self: Context, texture: dvui.Texture) void {
+pub fn textureDestroy(self: Context, texture: rui.Texture) void {
     _ = self;
     const tex: *win32.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
     _ = tex.IUnknown.Release();
 }
 
-pub fn textureFromTarget(self: Context, texture: dvui.TextureTarget) dvui.Texture {
+pub fn textureFromTarget(self: Context, texture: rui.TextureTarget) rui.Texture {
     const state = stateFromHwnd(hwndFromContext(self));
 
     // DX11 can't draw target textures, so read all the pixels and make a new texture
-    const pixels = dvui.textureReadTarget(state.arena, texture) catch unreachable;
+    const pixels = rui.textureReadTarget(state.arena, texture) catch unreachable;
     defer state.arena.free(pixels);
 
     const tex: *win32.ID3D11Texture2D = @ptrCast(@alignCast(texture.ptr));
@@ -742,7 +742,7 @@ pub fn textureFromTarget(self: Context, texture: dvui.TextureTarget) dvui.Textur
     return self.textureCreate(pixels.ptr, texture.width, texture.height, .linear);
 }
 
-pub fn renderTarget(self: Context, texture: ?dvui.TextureTarget) void {
+pub fn renderTarget(self: Context, texture: ?rui.TextureTarget) void {
     const state = stateFromHwnd(hwndFromContext(self));
     cleanupRenderTarget(state);
     if (texture) |tex| {
@@ -767,10 +767,10 @@ pub fn renderTarget(self: Context, texture: ?dvui.TextureTarget) void {
 
 pub fn drawClippedTriangles(
     self: Context,
-    texture: ?dvui.Texture,
-    vtx: []const dvui.Vertex,
+    texture: ?rui.Texture,
+    vtx: []const rui.Vertex,
     idx: []const u16,
-    clipr: ?dvui.Rect,
+    clipr: ?rui.Rect,
 ) void {
     const state = stateFromHwnd(hwndFromContext(self));
     const client_size = win32.getClientSize(hwndFromContext(self));
@@ -894,7 +894,7 @@ pub fn end(self: Context) void {
     _ = state.swap_chain.Present(if (state.vsync) 1 else 0, 0);
 }
 
-pub fn pixelSize(self: Context) dvui.Size {
+pub fn pixelSize(self: Context) rui.Size {
     const client_size = win32.getClientSize(hwndFromContext(self));
     return .{
         .w = @floatFromInt(client_size.cx),
@@ -902,7 +902,7 @@ pub fn pixelSize(self: Context) dvui.Size {
     };
 }
 
-pub fn windowSize(self: Context) dvui.Size {
+pub fn windowSize(self: Context) rui.Size {
     var rect: win32.RECT = undefined;
     if (0 == win32.GetWindowRect(hwndFromContext(self), &rect)) win32.panicWin32(
         "GetWindowRect",
@@ -924,8 +924,8 @@ pub fn hasEvent(_: Context) bool {
     return false;
 }
 
-pub fn backend(self: Context) dvui.Backend {
-    return dvui.Backend.init(self, @This());
+pub fn backend(self: Context) rui.Backend {
+    return rui.Backend.init(self, @This());
 }
 
 pub fn nanoTime(self: Context) i128 {
@@ -1000,7 +1000,7 @@ pub fn refresh(self: Context) void {
     _ = self;
 }
 
-fn addEvent(self: Context, window: *dvui.Window, key_event: KeyEvent) !bool {
+fn addEvent(self: Context, window: *rui.Window, key_event: KeyEvent) !bool {
     _ = self;
     const event = key_event.target;
     const action = key_event.action;
@@ -1009,7 +1009,7 @@ fn addEvent(self: Context, window: *dvui.Window, key_event: KeyEvent) !bool {
             return window.addEventKey(.{
                 .code = ev,
                 .action = if (action == .up) .up else .down,
-                .mod = dvui.enums.Mod.none,
+                .mod = rui.enums.Mod.none,
             });
         },
         .mouse_key => |ev| {
@@ -1025,13 +1025,13 @@ fn addEvent(self: Context, window: *dvui.Window, key_event: KeyEvent) !bool {
     }
 }
 
-pub fn addAllEvents(self: Context, window: *dvui.Window) !bool {
+pub fn addAllEvents(self: Context, window: *rui.Window) !bool {
     _ = self;
     _ = window;
     return false;
 }
 
-pub fn setCursor(self: Context, new_cursor: dvui.enums.Cursor) void {
+pub fn setCursor(self: Context, new_cursor: rui.enums.Cursor) void {
     const converted_cursor = switch (new_cursor) {
         .arrow => win32.IDC_ARROW,
         .ibeam => win32.IDC_IBEAM,
@@ -1078,11 +1078,11 @@ pub fn attach(
         vsync: bool,
     },
 ) !Context {
-    var dvui_window = try dvui.Window.init(@src(), gpa, contextFromHwnd(hwnd).backend(), .{});
-    errdefer dvui_window.deinit();
+    var rui_window = try rui.Window.init(@src(), gpa, contextFromHwnd(hwnd).backend(), .{});
+    errdefer rui_window.deinit();
     window_state.* = .{
         .vsync = opt.vsync,
-        .dvui_window = dvui_window,
+        .rui_window = rui_window,
         .device = dx_options.device,
         .device_context = dx_options.device_context,
         .swap_chain = dx_options.swap_chain,
@@ -1120,7 +1120,7 @@ pub fn wndProc(
                 return -1;
             };
             errdefer dx_options.deinit();
-            _ = attach(hwnd, args.window_state, args.dvui_gpa, dx_options, .{
+            _ = attach(hwnd, args.window_state, args.rui_gpa, dx_options, .{
                 .vsync = args.vsync,
             }) catch |e| {
                 args.err = e;
@@ -1159,11 +1159,11 @@ pub fn wndProc(
         },
         win32.WM_KEYDOWN, win32.WM_SYSKEYDOWN => {
             if (std.meta.intToEnum(win32.VIRTUAL_KEY, wparam)) |as_vkey| {
-                const conv_vkey = convertVKeyToDvuiKey(as_vkey);
+                const conv_vkey = convertVKeyToruiKey(as_vkey);
                 const state = stateFromHwnd(hwnd);
-                const dk = DvuiKey{ .keyboard_key = conv_vkey };
+                const dk = ruiKey{ .keyboard_key = conv_vkey };
                 _ = contextFromHwnd(hwnd).addEvent(
-                    &state.dvui_window,
+                    &state.rui_window,
                     KeyEvent{ .target = dk, .action = .down },
                 ) catch {};
             } else |err| {
@@ -1175,42 +1175,42 @@ pub fn wndProc(
                 0;
         },
         win32.WM_LBUTTONDOWN, win32.WM_LBUTTONDBLCLK => {
-            const lbutton = dvui.enums.Button.left;
-            const dk = DvuiKey{ .mouse_key = lbutton };
+            const lbutton = rui.enums.Button.left;
+            const dk = ruiKey{ .mouse_key = lbutton };
             const state = stateFromHwnd(hwnd);
             _ = contextFromHwnd(hwnd).addEvent(
-                &state.dvui_window,
+                &state.rui_window,
                 KeyEvent{ .target = dk, .action = .down },
             ) catch {};
             return 0;
         },
         win32.WM_RBUTTONDOWN => {
-            const rbutton = dvui.enums.Button.right;
+            const rbutton = rui.enums.Button.right;
             const state = stateFromHwnd(hwnd);
-            const dk = DvuiKey{ .mouse_key = rbutton };
+            const dk = ruiKey{ .mouse_key = rbutton };
             _ = contextFromHwnd(hwnd).addEvent(
-                &state.dvui_window,
+                &state.rui_window,
                 KeyEvent{ .target = dk, .action = .down },
             ) catch {};
             return 0;
         },
         win32.WM_MBUTTONDOWN => {
-            const mbutton = dvui.enums.Button.middle;
+            const mbutton = rui.enums.Button.middle;
             const state = stateFromHwnd(hwnd);
-            const dk = DvuiKey{ .mouse_key = mbutton };
+            const dk = ruiKey{ .mouse_key = mbutton };
             _ = contextFromHwnd(hwnd).addEvent(
-                &state.dvui_window,
+                &state.rui_window,
                 KeyEvent{ .target = dk, .action = .down },
             ) catch {};
             return 0;
         },
         win32.WM_XBUTTONDOWN => {
             const xbutton: packed struct { _upper: u16, which: u16, _lower: u32 } = @bitCast(wparam);
-            const variant = if (xbutton.which == 1) dvui.enums.Button.four else dvui.enums.Button.five;
+            const variant = if (xbutton.which == 1) rui.enums.Button.four else rui.enums.Button.five;
             const state = stateFromHwnd(hwnd);
-            const dk = DvuiKey{ .mouse_key = variant };
+            const dk = ruiKey{ .mouse_key = variant };
             _ = contextFromHwnd(hwnd).addEvent(
-                &state.dvui_window,
+                &state.rui_window,
                 KeyEvent{ .target = dk, .action = .down },
             ) catch {};
             return 0;
@@ -1221,8 +1221,8 @@ pub fn wndProc(
             const state = stateFromHwnd(hwnd);
             const mouse_x, const mouse_y = .{ bits.x, bits.y };
             _ = contextFromHwnd(hwnd).addEvent(
-                &state.dvui_window,
-                KeyEvent{ .target = DvuiKey{
+                &state.rui_window,
+                KeyEvent{ .target = ruiKey{
                     .mouse_event = .{ .x = mouse_x, .y = mouse_y },
                 }, .action = .down },
             ) catch {};
@@ -1230,11 +1230,11 @@ pub fn wndProc(
         },
         win32.WM_KEYUP, win32.WM_SYSKEYUP => {
             if (std.meta.intToEnum(win32.VIRTUAL_KEY, wparam)) |as_vkey| {
-                const conv_vkey = convertVKeyToDvuiKey(as_vkey);
+                const conv_vkey = convertVKeyToruiKey(as_vkey);
                 const state = stateFromHwnd(hwnd);
-                const dk = DvuiKey{ .keyboard_key = conv_vkey };
+                const dk = ruiKey{ .keyboard_key = conv_vkey };
                 _ = contextFromHwnd(hwnd).addEvent(
-                    &state.dvui_window,
+                    &state.rui_window,
                     KeyEvent{ .target = dk, .action = .up },
                 ) catch {};
             } else |err| {
@@ -1243,42 +1243,42 @@ pub fn wndProc(
             return 0;
         },
         win32.WM_LBUTTONUP => {
-            const lbutton = dvui.enums.Button.left;
+            const lbutton = rui.enums.Button.left;
             const state = stateFromHwnd(hwnd);
-            const dk = DvuiKey{ .mouse_key = lbutton };
+            const dk = ruiKey{ .mouse_key = lbutton };
             _ = contextFromHwnd(hwnd).addEvent(
-                &state.dvui_window,
+                &state.rui_window,
                 KeyEvent{ .target = dk, .action = .up },
             ) catch {};
             return 0;
         },
         win32.WM_RBUTTONUP => {
-            const rbutton = dvui.enums.Button.right;
+            const rbutton = rui.enums.Button.right;
             const state = stateFromHwnd(hwnd);
-            const dk = DvuiKey{ .mouse_key = rbutton };
+            const dk = ruiKey{ .mouse_key = rbutton };
             _ = contextFromHwnd(hwnd).addEvent(
-                &state.dvui_window,
+                &state.rui_window,
                 KeyEvent{ .target = dk, .action = .up },
             ) catch {};
             return 0;
         },
         win32.WM_MBUTTONUP => {
-            const mbutton = dvui.enums.Button.middle;
+            const mbutton = rui.enums.Button.middle;
             const state = stateFromHwnd(hwnd);
-            const dk = DvuiKey{ .mouse_key = mbutton };
+            const dk = ruiKey{ .mouse_key = mbutton };
             _ = contextFromHwnd(hwnd).addEvent(
-                &state.dvui_window,
+                &state.rui_window,
                 KeyEvent{ .target = dk, .action = .up },
             ) catch {};
             return 0;
         },
         win32.WM_XBUTTONUP => {
             const xbutton: packed struct { _upper: u16, which: u16, _lower: u32 } = @bitCast(wparam);
-            const variant = if (xbutton.which == 1) dvui.enums.Button.four else dvui.enums.Button.five;
+            const variant = if (xbutton.which == 1) rui.enums.Button.four else rui.enums.Button.five;
             const state = stateFromHwnd(hwnd);
-            const dk = DvuiKey{ .mouse_key = variant };
+            const dk = ruiKey{ .mouse_key = variant };
             _ = contextFromHwnd(hwnd).addEvent(
-                &state.dvui_window,
+                &state.rui_window,
                 KeyEvent{ .target = dk, .action = .up },
             ) catch {};
             return 0;
@@ -1287,7 +1287,7 @@ pub fn wndProc(
             const higher: isize = @intCast(wparam >> 16);
             const wheel_info: i16 = @truncate(higher);
             const state = stateFromHwnd(hwnd);
-            _ = contextFromHwnd(hwnd).addEvent(&state.dvui_window, KeyEvent{
+            _ = contextFromHwnd(hwnd).addEvent(&state.rui_window, KeyEvent{
                 .target = .{ .wheel_event = wheel_info },
                 .action = .none,
             }) catch {};
@@ -1298,7 +1298,7 @@ pub fn wndProc(
             const ascii_char: u8 = @truncate(wparam);
             if (std.ascii.isPrint(ascii_char)) {
                 const string: []const u8 = &.{ascii_char};
-                _ = state.dvui_window.addEventText(string) catch {};
+                _ = state.rui_window.addEventText(string) catch {};
             }
             return 0;
         },
@@ -1307,7 +1307,7 @@ pub fn wndProc(
 }
 
 // ############ Utilities ############
-fn convertSpaceToNDC(size: dvui.Size, x: f32, y: f32) XMFLOAT3 {
+fn convertSpaceToNDC(size: rui.Size, x: f32, y: f32) XMFLOAT3 {
     return XMFLOAT3{
         .x = (2.0 * x / size.w) - 1.0,
         .y = 1.0 - (2.0 * y / size.h),
@@ -1317,8 +1317,8 @@ fn convertSpaceToNDC(size: dvui.Size, x: f32, y: f32) XMFLOAT3 {
 
 fn convertVertices(
     arena: std.mem.Allocator,
-    size: dvui.Size,
-    vtx: []const dvui.Vertex,
+    size: rui.Size,
+    vtx: []const rui.Vertex,
     signal_invalid_uv: bool,
 ) ![]SimpleVertex {
     const simple_vertex = try arena.alloc(SimpleVertex, vtx.len);
@@ -1341,7 +1341,7 @@ fn convertVertices(
 const CreateWindowArgs = struct {
     window_state: *WindowState,
     vsync: bool,
-    dvui_gpa: std.mem.Allocator,
+    rui_gpa: std.mem.Allocator,
     err: ?anyerror = null,
 };
 
@@ -1417,8 +1417,8 @@ fn createDeviceD3D(hwnd: win32.HWND) ?Directx11Options {
     };
 }
 
-fn convertVKeyToDvuiKey(vkey: win32.VIRTUAL_KEY) dvui.enums.Key {
-    const K = dvui.enums.Key;
+fn convertVKeyToruiKey(vkey: win32.VIRTUAL_KEY) rui.enums.Key {
+    const K = rui.enums.Key;
     return switch (vkey) {
         .@"0", .NUMPAD0 => K.kp_0,
         .@"1", .NUMPAD1 => K.kp_1,
@@ -1547,9 +1547,9 @@ fn wWinMain(
 pub fn main() !void {
     _ = win32.AttachConsole(0xFFFFFFFF);
 
-    const app = dvui.App.get() orelse return error.DvuiAppNotDefined;
+    const app = rui.App.get() orelse return error.ruiAppNotDefined;
 
-    const window_class = win32.L("DvuiWindow");
+    const window_class = win32.L("ruiWindow");
 
     var gpa_instance = std.heap.GeneralPurposeAllocator(.{}){};
     const gpa = gpa_instance.allocator();
@@ -1567,7 +1567,7 @@ pub fn main() !void {
     // init dx11 backend (creates and owns OS window)
     const b = try initWindow(&window_state, .{
         .registered_class = window_class,
-        .dvui_gpa = gpa,
+        .rui_gpa = gpa,
         .allocator = gpa,
         .size = init_opts.size,
         .min_size = init_opts.min_size,
@@ -1588,14 +1588,14 @@ pub fn main() !void {
             // beginWait coordinates with waitTime below to run frames only when needed
             const nstime = win.beginWait(b.hasEvent());
 
-            // marks the beginning of a frame for dvui, can call dvui functions after this
+            // marks the beginning of a frame for rui, can call rui functions after this
             try win.begin(nstime);
 
-            // both dvui and dx11 drawing
+            // both rui and dx11 drawing
             const res = try app.frameFn();
 
-            // marks end of dvui frame, don't call dvui functions after this
-            // - sends all dvui stuff to backend for rendering, must be called before renderPresent()
+            // marks end of rui frame, don't call rui functions after this
+            // - sends all rui stuff to backend for rendering, must be called before renderPresent()
             _ = try win.end(.{});
 
             if (res != .ok) break;

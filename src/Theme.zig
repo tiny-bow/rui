@@ -1,9 +1,9 @@
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 const std = @import("std");
 
-const Color = dvui.Color;
-const Font = dvui.Font;
-const Options = dvui.Options;
+const Color = rui.Color;
+const Font = rui.Font;
+const Options = rui.Options;
 
 const Theme = @This();
 
@@ -97,20 +97,20 @@ pub fn picker(src: std.builtin.SourceLocation, opts: Options) !bool {
     };
 
     const options = defaults.override(opts);
-    const cw = dvui.currentWindow();
+    const cw = rui.currentWindow();
 
     const theme_choice: usize = blk: {
         for (cw.themes.values(), 0..) |val, i| {
-            if (std.mem.eql(u8, dvui.themeGet().name, val.name)) {
+            if (std.mem.eql(u8, rui.themeGet().name, val.name)) {
                 break :blk i;
             }
         }
         break :blk 0;
     };
 
-    var dd = dvui.DropdownWidget.init(
+    var dd = rui.DropdownWidget.init(
         src,
-        .{ .selected_index = theme_choice, .label = dvui.themeGet().name },
+        .{ .selected_index = theme_choice, .label = rui.themeGet().name },
         options,
     );
     try dd.install();
@@ -118,7 +118,7 @@ pub fn picker(src: std.builtin.SourceLocation, opts: Options) !bool {
     if (try dd.dropped()) {
         for (cw.themes.values()) |*theme| {
             if (try dd.addChoiceLabel(theme.name)) {
-                dvui.themeSet(theme);
+                rui.themeSet(theme);
                 picked = true;
                 break;
             }

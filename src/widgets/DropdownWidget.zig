@@ -30,7 +30,7 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
     self.options = defaults.override(opts);
     self.init_options = init_opts;
     self.menu = MenuWidget.init(src, .{ .dir = .horizontal }, self.options.wrapOuter());
-    self.drop_adjust = dvui.dataGet(null, self.menu.wd.id, "_drop_adjust", f32) orelse 0;
+    self.drop_adjust = rui.dataGet(null, self.menu.wd.id, "_drop_adjust", f32) orelse 0;
     return self;
 }
 
@@ -43,14 +43,14 @@ pub fn install(self: *DropdownWidget) !void {
     try self.menuItem.drawBackground(.{ .focus_as_outline = true });
 
     if (self.init_options.label) |ll| {
-        var hbox = try dvui.box(@src(), .horizontal, .{ .expand = .both });
+        var hbox = try rui.box(@src(), .horizontal, .{ .expand = .both });
 
         var lw = LabelWidget.initNoFmt(@src(), ll, self.options.strip().override(.{ .gravity_y = 0.5 }));
         try lw.install();
         try lw.draw();
         lw.deinit();
-        _ = try dvui.spacer(@src(), .{ .w = 6 }, .{});
-        try dvui.icon(@src(), "dropdown_triangle", dvui.entypo.chevron_small_down, self.options.strip().override(.{ .gravity_y = 0.5, .gravity_x = 1.0 }));
+        _ = try rui.spacer(@src(), .{ .w = 6 }, .{});
+        try rui.icon(@src(), "dropdown_triangle", rui.entypo.chevron_small_down, self.options.strip().override(.{ .gravity_y = 0.5, .gravity_x = 1.0 }));
 
         hbox.deinit();
     }
@@ -69,7 +69,7 @@ pub fn dropped(self: *DropdownWidget) !bool {
     if (self.menuItem.activeRect()) |r| {
         self.drop = FloatingMenuWidget.init(@src(), .{ .from = r, .avoid = .none }, .{ .min_size_content = r.size() });
         var drop = &self.drop.?;
-        self.drop_first_frame = dvui.firstFrame(drop.wd.id);
+        self.drop_first_frame = rui.firstFrame(drop.wd.id);
 
         const s = drop.scale_val;
 
@@ -89,12 +89,12 @@ pub fn dropped(self: *DropdownWidget) !bool {
         drop.menu.submenus_activated = true;
 
         // only want a mouse-up to choose something if the mouse has moved in the dropup
-        var eat_mouse_up = dvui.dataGet(null, drop.wd.id, "_eat_mouse_up", bool) orelse true;
-        var drag_scroll = dvui.dataGet(null, drop.wd.id, "_drag_scroll", bool) orelse false;
+        var eat_mouse_up = rui.dataGet(null, drop.wd.id, "_eat_mouse_up", bool) orelse true;
+        var drag_scroll = rui.dataGet(null, drop.wd.id, "_drag_scroll", bool) orelse false;
 
         const drop_rs = drop.data().rectScale();
         const scroll_rs = drop.scroll.data().contentRectScale();
-        const evts = dvui.events();
+        const evts = rui.events();
         for (evts) |*e| {
             if (drag_scroll and e.evt == .mouse and !e.evt.mouse.button.touch() and (e.evt.mouse.action == .motion or e.evt.mouse.action == .position)) {
                 if (e.evt.mouse.p.x >= scroll_rs.r.x and e.evt.mouse.p.x <= scroll_rs.r.x + scroll_rs.r.w and (e.evt.mouse.p.y <= scroll_rs.r.y or e.evt.mouse.p.y >= scroll_rs.r.y + scroll_rs.r.h)) {
@@ -106,12 +106,12 @@ pub fn dropped(self: *DropdownWidget) !bool {
                         } } };
                         drop.scroll.scroll.processEvent(&scrolldrag, true);
                     } else if (e.evt.mouse.action == .position) {
-                        dvui.currentWindow().inject_motion_event = true;
+                        rui.currentWindow().inject_motion_event = true;
                     }
                 }
             }
 
-            if (!dvui.eventMatch(e, .{ .id = drop.data().id, .r = drop_rs.r }))
+            if (!rui.eventMatch(e, .{ .id = drop.data().id, .r = drop_rs.r }))
                 continue;
 
             if (e.evt == .mouse) {
@@ -119,17 +119,17 @@ pub fn dropped(self: *DropdownWidget) !bool {
                     if (eat_mouse_up) {
                         e.handled = true;
                         eat_mouse_up = false;
-                        dvui.dataSet(null, drop.wd.id, "_eat_mouse_up", eat_mouse_up);
+                        rui.dataSet(null, drop.wd.id, "_eat_mouse_up", eat_mouse_up);
                     }
                 } else if (e.evt.mouse.action == .motion or (e.evt.mouse.action == .press and e.evt.mouse.button.pointer())) {
                     if (eat_mouse_up) {
                         eat_mouse_up = false;
-                        dvui.dataSet(null, drop.wd.id, "_eat_mouse_up", eat_mouse_up);
+                        rui.dataSet(null, drop.wd.id, "_eat_mouse_up", eat_mouse_up);
                     }
 
                     if (!drag_scroll) {
                         drag_scroll = true;
-                        dvui.dataSet(null, drop.wd.id, "_drag_scroll", drag_scroll);
+                        rui.dataSet(null, drop.wd.id, "_drag_scroll", drag_scroll);
                     }
                 }
             }
@@ -149,10 +149,10 @@ pub fn addChoiceLabel(self: *DropdownWidget, label_text: []const u8) !bool {
 
     var opts = self.options.strip();
     if (mi.show_active) {
-        opts = opts.override(dvui.themeGet().style_accent);
+        opts = opts.override(rui.themeGet().style_accent);
     }
 
-    try dvui.labelNoFmt(@src(), label_text, opts);
+    try rui.labelNoFmt(@src(), label_text, opts);
 
     if (mi.activeRect()) |_| {
         self.close();
@@ -176,8 +176,8 @@ pub fn addChoice(self: *DropdownWidget) !*MenuItemWidget {
     if (self.drop_first_frame) {
         if (self.init_options.selected_index) |si| {
             if (si == self.drop_mi_index) {
-                dvui.focusWidget(self.drop_mi.?.wd.id, null, null);
-                dvui.dataSet(null, self.menu.wd.id, "_drop_adjust", self.drop_height);
+                rui.focusWidget(self.drop_mi.?.wd.id, null, null);
+                rui.dataSet(null, self.menu.wd.id, "_drop_adjust", self.drop_height);
             }
         }
     }
@@ -195,17 +195,17 @@ pub fn deinit(self: *DropdownWidget) void {
     self.menu.deinit();
 }
 
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const Event = dvui.Event;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const Event = rui.Event;
 
-const MenuWidget = dvui.MenuWidget;
-const MenuItemWidget = dvui.MenuItemWidget;
-const FloatingMenuWidget = dvui.FloatingMenuWidget;
-const LabelWidget = dvui.LabelWidget;
+const MenuWidget = rui.MenuWidget;
+const MenuItemWidget = rui.MenuItemWidget;
+const FloatingMenuWidget = rui.FloatingMenuWidget;
+const LabelWidget = rui.LabelWidget;
 
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
 test {
     @import("std").testing.refAllDecls(@This());

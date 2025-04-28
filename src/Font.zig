@@ -1,8 +1,8 @@
 const std = @import("std");
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
-const Rect = dvui.Rect;
-const Size = dvui.Size;
+const Rect = rui.Rect;
+const Size = rui.Size;
 
 const Font = @This();
 
@@ -69,18 +69,18 @@ pub fn textSizeEx(self: *const Font, text: []const u8, max_width: ?f32, end_idx:
     // ask for a font that matches the natural display pixels so we get a more
     // accurate size
 
-    const ss = dvui.parentGet().screenRectScale(Rect{}).s;
+    const ss = rui.parentGet().screenRectScale(Rect{}).s;
     const ask_size = self.size * ss;
     const sized_font = self.resize(ask_size);
 
     // might give us a slightly smaller font
-    const fce = dvui.fontCacheGet(sized_font) catch |err| {
-        dvui.log.err("fontCacheGet got {!} for font \"{s}\"", .{ err, self.name });
+    const fce = rui.fontCacheGet(sized_font) catch |err| {
+        rui.log.err("fontCacheGet got {!} for font \"{s}\"", .{ err, self.name });
         return .{ .w = 10, .h = 10 };
     };
 
-    // this must be synced with dvui.renderText()
-    const target_fraction = if (dvui.currentWindow().snap_to_pixels) 1.0 / ss else self.size / fce.height;
+    // this must be synced with rui.renderText()
+    const target_fraction = if (rui.currentWindow().snap_to_pixels) 1.0 / ss else self.size / fce.height;
 
     var max_width_sized: ?f32 = null;
     if (max_width) |mwidth| {
@@ -89,7 +89,7 @@ pub fn textSizeEx(self: *const Font, text: []const u8, max_width: ?f32, end_idx:
     }
 
     var s = fce.textSizeRaw(self.name, text, max_width_sized, end_idx, end_metric) catch |err| {
-        dvui.log.err("textSizeRaw got {!} for font \"{s}\" text \"{s}\"", .{ err, self.name, text });
+        rui.log.err("textSizeRaw got {!} for font \"{s}\" text \"{s}\"", .{ err, self.name, text });
         return .{ .w = 10, .h = 10 };
     };
 
@@ -131,14 +131,14 @@ pub const TTFBytes = struct {
     //pub const OpenDyslexicBdIt = @embedFile("fonts/OpenDyslexic/compiled/OpenDyslexic-Bold-Italic.otf");
 };
 
-pub fn initTTFBytesDatabase(allocator: std.mem.Allocator) !std.StringHashMap(dvui.FontBytesEntry) {
-    var result = std.StringHashMap(dvui.FontBytesEntry).init(allocator);
+pub fn initTTFBytesDatabase(allocator: std.mem.Allocator) !std.StringHashMap(rui.FontBytesEntry) {
+    var result = std.StringHashMap(rui.FontBytesEntry).init(allocator);
     inline for (@typeInfo(TTFBytes).@"struct".decls) |decl| {
-        try result.put(decl.name, dvui.FontBytesEntry{ .ttf_bytes = @field(TTFBytes, decl.name), .allocator = null });
+        try result.put(decl.name, rui.FontBytesEntry{ .ttf_bytes = @field(TTFBytes, decl.name), .allocator = null });
     }
 
-    if (!dvui.wasm) {
-        try result.put("Noto", dvui.FontBytesEntry{ .ttf_bytes = @embedFile("fonts/NotoSansKR-Regular.ttf"), .allocator = null });
+    if (!rui.wasm) {
+        try result.put("Noto", rui.FontBytesEntry{ .ttf_bytes = @embedFile("fonts/NotoSansKR-Regular.ttf"), .allocator = null });
     }
 
     return result;

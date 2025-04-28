@@ -1,9 +1,9 @@
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Color = dvui.Color;
-const Font = dvui.Font;
-const Theme = dvui.Theme;
-const Options = dvui.Options;
+const Color = rui.Color;
+const Font = rui.Font;
+const Theme = rui.Theme;
+const Options = rui.Options;
 
 const accent = Color{ .r = 0x35, .g = 0x84, .b = 0xe4 };
 const accent_hsl = Color.HSLuv.fromColor(accent);

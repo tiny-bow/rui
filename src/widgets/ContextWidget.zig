@@ -1,14 +1,14 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Point = dvui.Point;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
+const Event = rui.Event;
+const Options = rui.Options;
+const Point = rui.Point;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
 
 const ContextWidget = @This();
 
@@ -27,16 +27,16 @@ activePt: Point = Point{},
 pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Options) ContextWidget {
     var self = ContextWidget{};
     const defaults = Options{ .name = "Context" };
-    self.wd = WidgetData.init(src, .{}, defaults.override(opts).override(.{ .rect = dvui.parentGet().data().rectScale().rectFromScreen(init_opts.rect) }));
+    self.wd = WidgetData.init(src, .{}, defaults.override(opts).override(.{ .rect = rui.parentGet().data().rectScale().rectFromScreen(init_opts.rect) }));
     self.init_options = init_opts;
-    self.winId = dvui.subwindowCurrentId();
-    if (dvui.focusedWidgetIdInCurrentSubwindow()) |fid| {
+    self.winId = rui.subwindowCurrentId();
+    if (rui.focusedWidgetIdInCurrentSubwindow()) |fid| {
         if (fid == self.wd.id) {
             self.focused = true;
         }
     }
 
-    if (dvui.dataGet(null, self.wd.id, "_activePt", Point)) |a| {
+    if (rui.dataGet(null, self.wd.id, "_activePt", Point)) |a| {
         self.activePt = a;
     }
 
@@ -44,7 +44,7 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
 }
 
 pub fn install(self: *ContextWidget) !void {
-    dvui.parentSet(self.widget());
+    rui.parentSet(self.widget());
     try self.wd.register();
     try self.wd.borderAndBackground(.{});
 }
@@ -67,8 +67,8 @@ pub fn data(self: *ContextWidget) *WidgetData {
 
 pub fn rectFor(self: *ContextWidget, id: u32, min_size: Size, e: Options.Expand, g: Options.Gravity) Rect {
     _ = id;
-    dvui.log.debug("{s}:{d} ContextWidget should not have normal child widgets, only menu stuff", .{ self.wd.src.file, self.wd.src.line });
-    return dvui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
+    rui.log.debug("{s}:{d} ContextWidget should not have normal child widgets, only menu stuff", .{ self.wd.src.file, self.wd.src.line });
+    return rui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
 }
 
 pub fn screenRectScale(self: *ContextWidget, rect: Rect) RectScale {
@@ -80,9 +80,9 @@ pub fn minSizeForChild(self: *ContextWidget, s: Size) void {
 }
 
 pub fn processEvents(self: *ContextWidget) void {
-    const evts = dvui.events();
+    const evts = rui.events();
     for (evts) |*e| {
-        if (!dvui.eventMatchSimple(e, self.data()))
+        if (!rui.eventMatchSimple(e, self.data()))
             continue;
 
         self.processEvent(e, false);
@@ -102,11 +102,11 @@ pub fn processEvent(self: *ContextWidget, e: *Event, bubbling: bool) void {
             } else if (me.action == .press and me.button == .right) {
                 e.handled = true;
 
-                dvui.focusWidget(self.wd.id, null, e.num);
+                rui.focusWidget(self.wd.id, null, e.num);
                 self.focused = true;
 
                 // scale the point back to natural so we can use it in Popup
-                self.activePt = me.p.scale(1 / dvui.windowNaturalScale());
+                self.activePt = me.p.scale(1 / rui.windowNaturalScale());
 
                 // offset just enough so when Popup first appears nothing is highlighted
                 self.activePt.x += 1;
@@ -115,7 +115,7 @@ pub fn processEvent(self: *ContextWidget, e: *Event, bubbling: bool) void {
         .close_popup => {
             if (self.focused) {
                 // we are getting a bubbled event, so the window we are in is not the current one
-                dvui.focusWidget(null, self.winId, null);
+                rui.focusWidget(null, self.winId, null);
             }
         },
         else => {},
@@ -128,14 +128,14 @@ pub fn processEvent(self: *ContextWidget, e: *Event, bubbling: bool) void {
 
 pub fn deinit(self: *ContextWidget) void {
     if (self.focused) {
-        dvui.dataSet(null, self.wd.id, "_activePt", self.activePt);
+        rui.dataSet(null, self.wd.id, "_activePt", self.activePt);
     }
 
     // we are always given a rect, so we don't do normal layout, don't do these
     //self.wd.minSizeSetAndRefresh();
     //self.wd.minSizeReportToParent();
 
-    dvui.parentReset(self.wd.id, self.wd.parent);
+    rui.parentReset(self.wd.id, self.wd.parent);
 }
 
 test {

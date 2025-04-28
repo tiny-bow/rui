@@ -9,7 +9,7 @@
 // Adapted from https://gist.github.com/Kryzarel/bba64622057f21a1d6d44879f9cd7bd4
 
 const std = @import("std");
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
 pub const EasingFn = fn (t: f32) f32;
 
@@ -190,7 +190,7 @@ test {
 }
 
 test "easing-plot-{s}.png" {
-    var t = try dvui.testing.init(.{ .window_size = .{ .w = 300, .h = 400 } });
+    var t = try rui.testing.init(.{ .window_size = .{ .w = 300, .h = 400 } });
     defer t.deinit();
 
     const plot = struct {
@@ -198,23 +198,23 @@ test "easing-plot-{s}.png" {
 
         const resolution = 100;
 
-        fn frame() !dvui.App.Result {
-            var y_axis = dvui.PlotWidget.Axis{ .min = -0.5, .max = 1.5 };
-            var x_axis = dvui.PlotWidget.Axis{ .min = -0.25, .max = 1.25 };
-            var plot = try dvui.plot(@src(), .{ .x_axis = &x_axis, .y_axis = &y_axis }, .{ .expand = .both });
+        fn frame() !rui.App.Result {
+            var y_axis = rui.PlotWidget.Axis{ .min = -0.5, .max = 1.5 };
+            var x_axis = rui.PlotWidget.Axis{ .min = -0.25, .max = 1.25 };
+            var plot = try rui.plot(@src(), .{ .x_axis = &x_axis, .y_axis = &y_axis }, .{ .expand = .both });
             defer plot.deinit();
 
             var x_line = plot.line();
             defer x_line.deinit();
             try x_line.point(0, 0);
             try x_line.point(1, 0);
-            try x_line.stroke(1, dvui.Color.black);
+            try x_line.stroke(1, rui.Color.black);
 
             var y_line = plot.line();
             defer y_line.deinit();
             try y_line.point(0, 0);
             try y_line.point(0, 1);
-            try y_line.stroke(1, dvui.Color.black);
+            try y_line.stroke(1, rui.Color.black);
 
             var line = plot.line();
             defer line.deinit();
@@ -228,7 +228,7 @@ test "easing-plot-{s}.png" {
         }
     };
 
-    try dvui.testing.settle(plot.frame);
+    try rui.testing.settle(plot.frame);
     try t.saveDocImage(@src(), .{"linear"}, plot.frame);
 
     inline for (@typeInfo(@This()).@"struct".decls) |decl| {

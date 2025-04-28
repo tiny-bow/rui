@@ -1,15 +1,15 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Point = dvui.Point;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
-const BoxWidget = dvui.BoxWidget;
+const Event = rui.Event;
+const Options = rui.Options;
+const Point = rui.Point;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
+const BoxWidget = rui.BoxWidget;
 
 const FloatingWindowWidget = @This();
 
@@ -51,7 +51,7 @@ const DragPart = enum {
     top_right,
     bottom_left,
 
-    pub fn cursor(self: DragPart) dvui.enums.Cursor {
+    pub fn cursor(self: DragPart) rui.enums.Cursor {
         return switch (self) {
             .middle => .arrow_all,
 
@@ -74,7 +74,7 @@ prev_rendering: bool = undefined,
 wd: WidgetData = undefined,
 init_options: InitOptions = undefined,
 options: Options = undefined,
-prev_windowInfo: dvui.subwindowCurrentSetReturn = undefined,
+prev_windowInfo: rui.subwindowCurrentSetReturn = undefined,
 layout: BoxWidget = undefined,
 prevClip: Rect = Rect{},
 auto_pos: bool = false,
@@ -109,11 +109,11 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
         autopossize = false;
     } else {
         // we store the rect (only while the window is open)
-        self.wd.rect = dvui.dataGet(null, self.wd.id, "_rect", Rect) orelse Rect{};
+        self.wd.rect = rui.dataGet(null, self.wd.id, "_rect", Rect) orelse Rect{};
     }
 
     if (autopossize) {
-        if (dvui.dataGet(null, self.wd.id, "_auto_size", @TypeOf(self.auto_size))) |as| {
+        if (rui.dataGet(null, self.wd.id, "_auto_size", @TypeOf(self.auto_size))) |as| {
             self.auto_size = as;
         } else {
             if (self.wd.rect.w == 0 and self.wd.rect.h == 0) {
@@ -121,21 +121,21 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
             }
         }
 
-        if (dvui.dataGet(null, self.wd.id, "_auto_pos", @TypeOf(self.auto_pos))) |ap| {
+        if (rui.dataGet(null, self.wd.id, "_auto_pos", @TypeOf(self.auto_pos))) |ap| {
             self.auto_pos = ap;
         } else {
             self.auto_pos = (self.wd.rect.x == 0 and self.wd.rect.y == 0);
         }
     }
 
-    if (dvui.minSizeGet(self.wd.id)) |min_size| {
+    if (rui.minSizeGet(self.wd.id)) |min_size| {
         if (self.auto_size) {
             // Track if any of our children called refresh(), and in deinit we
             // will turn off auto_size if none of them did.
-            self.auto_size_refresh_prev_value = dvui.currentWindow().extra_frames_needed;
-            dvui.currentWindow().extra_frames_needed = 0;
+            self.auto_size_refresh_prev_value = rui.currentWindow().extra_frames_needed;
+            rui.currentWindow().extra_frames_needed = 0;
 
-            const ms = Size.min(Size.max(min_size, self.options.min_sizeGet()), dvui.windowRect().size());
+            const ms = Size.min(Size.max(min_size, self.options.min_sizeGet()), rui.windowRect().size());
             self.wd.rect.w = ms.w;
             self.wd.rect.h = ms.h;
         }
@@ -144,11 +144,11 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
             // only position ourselves once by default
             self.auto_pos = false;
 
-            const centering = self.init_options.center_on orelse dvui.currentWindow().subwindow_currentRect;
+            const centering = self.init_options.center_on orelse rui.currentWindow().subwindow_currentRect;
             self.wd.rect.x = centering.x + (centering.w - self.wd.rect.w) / 2;
             self.wd.rect.y = centering.y + (centering.h - self.wd.rect.h) / 2;
 
-            if (dvui.snapToPixels()) {
+            if (rui.snapToPixels()) {
                 const s = self.wd.rectScale().s;
                 self.wd.rect.x = @round(self.wd.rect.x * s) / s;
                 self.wd.rect.y = @round(self.wd.rect.y * s) / s;
@@ -163,7 +163,7 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
             }
 
             if (self.init_options.window_avoid == .nudge) {
-                const cw = dvui.currentWindow();
+                const cw = rui.currentWindow();
 
                 // we might nudge onto another window, so have to keep checking until we don't
                 var nudge = true;
@@ -184,34 +184,34 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
         }
 
         // always make sure we are on the screen
-        var screen = dvui.windowRect();
+        var screen = rui.windowRect();
         // okay if we are off the left or right but still see some
         const offleft = self.wd.rect.w - 48;
         screen.x -= offleft;
         screen.w += offleft + offleft;
         // okay if we are off the bottom but still see the top
         screen.h += self.wd.rect.h - 24;
-        self.wd.rect = dvui.placeOnScreen(screen, .{}, .none, self.wd.rect);
+        self.wd.rect = rui.placeOnScreen(screen, .{}, .none, self.wd.rect);
     }
 
     return self;
 }
 
 pub fn install(self: *FloatingWindowWidget) !void {
-    self.prev_rendering = dvui.renderingSet(false);
+    self.prev_rendering = rui.renderingSet(false);
 
-    if (dvui.firstFrame(self.wd.id)) {
-        dvui.focusSubwindow(self.wd.id, null);
+    if (rui.firstFrame(self.wd.id)) {
+        rui.focusSubwindow(self.wd.id, null);
 
         // write back before we hide ourselves for the first frame
-        dvui.dataSet(null, self.wd.id, "_rect", self.wd.rect);
+        rui.dataSet(null, self.wd.id, "_rect", self.wd.rect);
         if (self.init_options.rect) |ior| {
             // send rect back to user
             ior.* = self.wd.rect;
         }
 
         // need a second frame to fit contents
-        dvui.refresh(null, @src(), self.wd.id);
+        rui.refresh(null, @src(), self.wd.id);
 
         // hide our first frame so the user doesn't see an empty window or
         // jump when we autopos/autosize - do this in install() because
@@ -220,33 +220,33 @@ pub fn install(self: *FloatingWindowWidget) !void {
         self.wd.rect.h = 0;
     }
 
-    if (dvui.captured(self.wd.id)) {
-        if (dvui.dataGet(null, self.wd.id, "_drag_part", DragPart)) |dp| {
+    if (rui.captured(self.wd.id)) {
+        if (rui.dataGet(null, self.wd.id, "_drag_part", DragPart)) |dp| {
             self.drag_part = dp;
         }
     }
 
-    dvui.parentSet(self.widget());
-    self.prev_windowInfo = dvui.subwindowCurrentSet(self.wd.id, self.wd.rect);
+    rui.parentSet(self.widget());
+    self.prev_windowInfo = rui.subwindowCurrentSet(self.wd.id, self.wd.rect);
 
     // reset clip to whole OS window
     // - if modal fade everything below us
     // - gives us all mouse events
-    self.prevClip = dvui.clipGet();
-    dvui.clipSet(dvui.windowRectPixels());
+    self.prevClip = rui.clipGet();
+    rui.clipSet(rui.windowRectPixels());
 }
 
 pub fn drawBackground(self: *FloatingWindowWidget) !void {
     const rs = self.wd.rectScale();
-    try dvui.subwindowAdd(self.wd.id, self.wd.rect, rs.r, self.init_options.modal, if (self.init_options.stay_above_parent_window) self.prev_windowInfo.id else null);
-    dvui.captureMouseMaintain(.{ .id = self.wd.id, .rect = rs.r, .subwindow_id = self.wd.id });
+    try rui.subwindowAdd(self.wd.id, self.wd.rect, rs.r, self.init_options.modal, if (self.init_options.stay_above_parent_window) self.prev_windowInfo.id else null);
+    rui.captureMouseMaintain(.{ .id = self.wd.id, .rect = rs.r, .subwindow_id = self.wd.id });
     try self.wd.register();
 
     if (self.init_options.modal) {
         // paint over everything below
         var col = self.options.color(.text);
-        col.a = if (dvui.themeGet().dark) 60 else 80;
-        try dvui.windowRectPixels().fill(Rect.all(0), col);
+        col.a = if (rui.themeGet().dark) 60 else 80;
+        try rui.windowRectPixels().fill(Rect.all(0), col);
     }
 
     // we are using BoxWidget to do border/background
@@ -255,7 +255,7 @@ pub fn drawBackground(self: *FloatingWindowWidget) !void {
     try self.layout.drawBackground();
 
     // clip to just our window (layout has the margin)
-    dvui.clipSet(self.layout.data().borderRectScale().r);
+    rui.clipSet(self.layout.data().borderRectScale().r);
 }
 
 fn dragPart(me: Event.Mouse, rs: RectScale) DragPart {
@@ -342,9 +342,9 @@ fn dragAdjust(self: *FloatingWindowWidget, p: Point, dp: Point, drag_part: DragP
 
 pub fn processEventsBefore(self: *FloatingWindowWidget) void {
     const rs = self.wd.rectScale();
-    const evts = dvui.events();
+    const evts = rui.events();
     for (evts) |*e| {
-        if (!dvui.eventMatch(e, .{ .id = self.wd.id, .r = rs.r }))
+        if (!rui.eventMatch(e, .{ .id = self.wd.id, .r = rs.r }))
             continue;
 
         if (e.evt == .mouse) {
@@ -352,14 +352,14 @@ pub fn processEventsBefore(self: *FloatingWindowWidget) void {
 
             if (me.action == .focus) {
                 // focus but let the focus event propagate to widgets
-                dvui.focusSubwindow(self.wd.id, e.num);
+                rui.focusSubwindow(self.wd.id, e.num);
                 continue;
             }
 
             // If we are already dragging, do it here so it happens before drawing
-            if (me.action == .motion and dvui.captured(self.wd.id)) {
-                if (dvui.dragging(me.p)) |dps| {
-                    const p = me.p.plus(dvui.dragOffset()).scale(1 / rs.s);
+            if (me.action == .motion and rui.captured(self.wd.id)) {
+                if (rui.dragging(me.p)) |dps| {
+                    const p = me.p.plus(rui.dragOffset()).scale(1 / rs.s);
                     self.dragAdjust(p, dps.scale(1 / rs.s), self.drag_part.?);
                     // don't need refresh() because we're before drawing
                     e.handled = true;
@@ -367,9 +367,9 @@ pub fn processEventsBefore(self: *FloatingWindowWidget) void {
                 }
             }
 
-            if (me.action == .release and me.button.pointer() and dvui.captured(self.wd.id)) {
-                dvui.captureMouse(null); // stop drag and capture
-                dvui.dragEnd();
+            if (me.action == .release and me.button.pointer() and rui.captured(self.wd.id)) {
+                rui.captureMouse(null); // stop drag and capture
+                rui.dragEnd();
                 e.handled = true;
                 continue;
             }
@@ -377,9 +377,9 @@ pub fn processEventsBefore(self: *FloatingWindowWidget) void {
             if (me.action == .press and me.button.pointer()) {
                 if (dragPart(me, rs) == .bottom_right) {
                     // capture and start drag
-                    dvui.captureMouse(self.data());
+                    rui.captureMouse(self.data());
                     self.drag_part = .bottom_right;
-                    dvui.dragStart(me.p, .{ .cursor = .arrow_nw_se, .offset = Point.diff(rs.r.bottomRight(), me.p) });
+                    rui.dragStart(me.p, .{ .cursor = .arrow_nw_se, .offset = Point.diff(rs.r.bottomRight(), me.p) });
                     e.handled = true;
                     continue;
                 }
@@ -388,7 +388,7 @@ pub fn processEventsBefore(self: *FloatingWindowWidget) void {
             if (me.action == .position) {
                 if (dragPart(me, rs) == .bottom_right) {
                     e.handled = true; // don't want any widgets under this to see a hover
-                    dvui.cursorSet(.arrow_nw_se);
+                    rui.cursorSet(.arrow_nw_se);
                     continue;
                 }
             }
@@ -403,9 +403,9 @@ pub fn processEventsAfter(self: *FloatingWindowWidget) void {
     // anything until you got capture here
     //
     // bottom_right corner happens in processEventsBefore
-    const evts = dvui.events();
+    const evts = rui.events();
     for (evts) |*e| {
-        if (!dvui.eventMatch(e, .{ .id = self.wd.id, .r = rs.r, .cleanup = true }))
+        if (!rui.eventMatch(e, .{ .id = self.wd.id, .r = rs.r, .cleanup = true }))
             continue;
 
         switch (e.evt) {
@@ -414,38 +414,38 @@ pub fn processEventsAfter(self: *FloatingWindowWidget) void {
                     .focus => {
                         e.handled = true;
                         // unhandled focus (clicked on nothing)
-                        dvui.focusWidget(null, null, null);
+                        rui.focusWidget(null, null, null);
                     },
                     .press => {
                         if (me.button.pointer()) {
                             e.handled = true;
                             // capture and start drag
-                            dvui.captureMouse(self.data());
+                            rui.captureMouse(self.data());
                             self.drag_part = dragPart(me, rs);
-                            dvui.dragPreStart(e.evt.mouse.p, .{ .cursor = self.drag_part.?.cursor() });
+                            rui.dragPreStart(e.evt.mouse.p, .{ .cursor = self.drag_part.?.cursor() });
                         }
                     },
                     .release => {
-                        if (me.button.pointer() and dvui.captured(self.wd.id)) {
+                        if (me.button.pointer() and rui.captured(self.wd.id)) {
                             e.handled = true;
-                            dvui.captureMouse(null); // stop drag and capture
-                            dvui.dragEnd();
+                            rui.captureMouse(null); // stop drag and capture
+                            rui.dragEnd();
                         }
                     },
                     .motion => {
-                        if (dvui.captured(self.wd.id)) {
+                        if (rui.captured(self.wd.id)) {
                             // move if dragging
-                            if (dvui.dragging(me.p)) |dps| {
-                                const p = me.p.plus(dvui.dragOffset()).scale(1 / rs.s);
+                            if (rui.dragging(me.p)) |dps| {
+                                const p = me.p.plus(rui.dragOffset()).scale(1 / rs.s);
                                 self.dragAdjust(p, dps.scale(1 / rs.s), self.drag_part.?);
 
                                 e.handled = true;
-                                dvui.refresh(null, @src(), self.wd.id);
+                                rui.refresh(null, @src(), self.wd.id);
                             }
                         }
                     },
                     .position => {
-                        dvui.cursorSet(dragPart(me, rs).cursor());
+                        rui.cursorSet(dragPart(me, rs).cursor());
                     },
                     else => {},
                 }
@@ -454,12 +454,12 @@ pub fn processEventsAfter(self: *FloatingWindowWidget) void {
                 // catch any tabs that weren't handled by widgets
                 if (ke.action == .down and ke.matchBind("next_widget")) {
                     e.handled = true;
-                    dvui.tabIndexNext(e.num);
+                    rui.tabIndexNext(e.num);
                 }
 
                 if (ke.action == .down and ke.matchBind("prev_widget")) {
                     e.handled = true;
-                    dvui.tabIndexPrev(e.num);
+                    rui.tabIndexPrev(e.num);
                 }
             },
             else => {},
@@ -480,9 +480,9 @@ pub fn close(self: *FloatingWindowWidget) void {
     if (self.init_options.open_flag) |of| {
         of.* = false;
     } else {
-        dvui.log.warn("{s}:{d} FloatingWindowWidget.close() was called but it has no open_flag", .{ self.wd.src.file, self.wd.src.line });
+        rui.log.warn("{s}:{d} FloatingWindowWidget.close() was called but it has no open_flag", .{ self.wd.src.file, self.wd.src.line });
     }
-    dvui.refresh(null, @src(), self.wd.id);
+    rui.refresh(null, @src(), self.wd.id);
 }
 
 pub fn widget(self: *FloatingWindowWidget) Widget {
@@ -495,7 +495,7 @@ pub fn data(self: *FloatingWindowWidget) *WidgetData {
 
 pub fn rectFor(self: *FloatingWindowWidget, id: u32, min_size: Size, e: Options.Expand, g: Options.Gravity) Rect {
     _ = id;
-    return dvui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
+    return rui.placeIn(self.wd.contentRect().justSize(), min_size, e, g);
 }
 
 pub fn screenRectScale(self: *FloatingWindowWidget, rect: Rect) RectScale {
@@ -515,7 +515,7 @@ pub fn processEvent(self: *FloatingWindowWidget, e: *Event, bubbling: bool) void
                 // when a popup is closed because the user chose to, the
                 // window that spawned it (which had focus previously)
                 // should become focused again
-                dvui.focusSubwindow(self.wd.id, null);
+                rui.focusSubwindow(self.wd.id, null);
             }
         },
         else => {},
@@ -529,39 +529,39 @@ pub fn deinit(self: *FloatingWindowWidget) void {
     self.layout.deinit();
 
     if (self.auto_size_refresh_prev_value) |pv| {
-        if (dvui.currentWindow().extra_frames_needed == 0) {
+        if (rui.currentWindow().extra_frames_needed == 0) {
             self.auto_size = false;
         }
-        dvui.currentWindow().extra_frames_needed = @max(dvui.currentWindow().extra_frames_needed, pv);
+        rui.currentWindow().extra_frames_needed = @max(rui.currentWindow().extra_frames_needed, pv);
     }
 
     if (self.init_options.process_events_in_deinit) {
         self.processEventsAfter();
     }
 
-    if (!dvui.firstFrame(self.wd.id)) {
+    if (!rui.firstFrame(self.wd.id)) {
         // if firstFrame, we already did this in install
-        dvui.dataSet(null, self.wd.id, "_rect", self.wd.rect);
+        rui.dataSet(null, self.wd.id, "_rect", self.wd.rect);
         if (self.init_options.rect) |ior| {
             // send rect back to user
             ior.* = self.wd.rect;
         }
     }
 
-    if (dvui.captured(self.wd.id)) {
-        dvui.dataSet(null, self.wd.id, "_drag_part", self.drag_part.?);
+    if (rui.captured(self.wd.id)) {
+        rui.dataSet(null, self.wd.id, "_drag_part", self.drag_part.?);
     }
 
-    dvui.dataSet(null, self.wd.id, "_auto_pos", self.auto_pos);
-    dvui.dataSet(null, self.wd.id, "_auto_size", self.auto_size);
+    rui.dataSet(null, self.wd.id, "_auto_pos", self.auto_pos);
+    rui.dataSet(null, self.wd.id, "_auto_size", self.auto_size);
     self.wd.minSizeSetAndRefresh();
 
     // outside normal layout, don't call minSizeForChild or self.wd.minSizeReportToParent();
 
-    dvui.parentReset(self.wd.id, self.wd.parent);
-    _ = dvui.subwindowCurrentSet(self.prev_windowInfo.id, self.prev_windowInfo.rect);
-    dvui.clipSet(self.prevClip);
-    _ = dvui.renderingSet(self.prev_rendering);
+    rui.parentReset(self.wd.id, self.wd.parent);
+    _ = rui.subwindowCurrentSet(self.prev_windowInfo.id, self.prev_windowInfo.rect);
+    rui.clipSet(self.prevClip);
+    _ = rui.renderingSet(self.prev_rendering);
 }
 
 test {

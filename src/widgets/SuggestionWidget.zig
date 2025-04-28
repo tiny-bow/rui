@@ -23,15 +23,15 @@ pub const InitOptions = struct {
 
 pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Options) SuggestionWidget {
     var self = SuggestionWidget{};
-    self.id = dvui.parentGet().extendId(src, opts.idExtra());
+    self.id = rui.parentGet().extendId(src, opts.idExtra());
     self.options = defaults.override(opts);
     self.init_options = init_opts;
-    self.selected_index = dvui.dataGet(null, self.id, "_selected", usize) orelse 0;
+    self.selected_index = rui.dataGet(null, self.id, "_selected", usize) orelse 0;
     return self;
 }
 
 pub fn install(self: *SuggestionWidget) !void {
-    self.menu = try dvui.menu(@src(), .horizontal, .{ .rect = .{}, .id_extra = self.options.idExtra() });
+    self.menu = try rui.menu(@src(), .horizontal, .{ .rect = .{}, .id_extra = self.options.idExtra() });
 }
 
 // Use this to see if dropped will return true without installing the
@@ -55,10 +55,10 @@ pub fn dropped(self: *SuggestionWidget) !bool {
     }
 
     if (self.menu.submenus_activated) {
-        self.drop = try dvui.floatingMenu(@src(), .{ .from = self.init_options.rs.r }, self.options);
-        if (dvui.firstFrame(self.drop.?.data().id)) {
+        self.drop = try rui.floatingMenu(@src(), .{ .from = self.init_options.rs.r }, self.options);
+        if (rui.firstFrame(self.drop.?.data().id)) {
             // don't take focus away from text_entry when showing the suggestions
-            dvui.focusWidget(self.init_options.text_entry_id, null, null);
+            rui.focusWidget(self.init_options.text_entry_id, null, null);
         }
     }
 
@@ -72,7 +72,7 @@ pub fn dropped(self: *SuggestionWidget) !bool {
 pub fn addChoiceLabel(self: *SuggestionWidget, label_str: []const u8) !bool {
     var mi = try self.addChoice();
 
-    try dvui.labelNoFmt(@src(), label_str, .{});
+    try rui.labelNoFmt(@src(), label_str, .{});
 
     var ret: bool = false;
     if (mi.activeRect()) |_| {
@@ -97,7 +97,7 @@ pub fn addChoice(self: *SuggestionWidget) !*MenuItemWidget {
     }
     try self.drop_mi.?.install();
     self.drop_mi.?.processEvents();
-    if (self.drop_mi.?.data().id == dvui.focusedWidgetId()) {
+    if (self.drop_mi.?.data().id == rui.focusedWidgetId()) {
         self.selected_index = self.drop_mi_index;
     }
     try self.drop_mi.?.drawBackground(.{});
@@ -110,9 +110,9 @@ pub fn addChoice(self: *SuggestionWidget) !*MenuItemWidget {
 pub fn deinit(self: *SuggestionWidget) void {
     if (self.selected_index > (self.drop_mi_index -| 1)) {
         self.selected_index = self.drop_mi_index -| 1;
-        dvui.refresh(null, @src(), self.id);
+        rui.refresh(null, @src(), self.id);
     }
-    dvui.dataSet(null, self.id, "_selected", self.selected_index);
+    rui.dataSet(null, self.id, "_selected", self.selected_index);
     if (self.drop != null) {
         self.drop.?.deinit();
         self.drop = null;
@@ -120,15 +120,15 @@ pub fn deinit(self: *SuggestionWidget) void {
     self.menu.deinit();
 }
 
-const Options = dvui.Options;
-const RectScale = dvui.RectScale;
+const Options = rui.Options;
+const RectScale = rui.RectScale;
 
-const MenuWidget = dvui.MenuWidget;
-const MenuItemWidget = dvui.MenuItemWidget;
-const FloatingMenuWidget = dvui.FloatingMenuWidget;
+const MenuWidget = rui.MenuWidget;
+const MenuItemWidget = rui.MenuItemWidget;
+const FloatingMenuWidget = rui.FloatingMenuWidget;
 
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
 test {
     @import("std").testing.refAllDecls(@This());

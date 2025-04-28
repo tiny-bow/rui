@@ -1,7 +1,7 @@
 const std = @import("std");
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
-const Rect = dvui.Rect;
+const Rect = rui.Rect;
 
 const Size = @This();
 

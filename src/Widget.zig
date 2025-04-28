@@ -1,12 +1,12 @@
 const std = @import("std");
-const dvui = @import("dvui.zig");
+const rui = @import("rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
-const WidgetData = dvui.WidgetData;
+const Event = rui.Event;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
+const WidgetData = rui.WidgetData;
 
 const Widget = @This();
 
@@ -80,7 +80,7 @@ pub fn data(self: Widget) *WidgetData {
 }
 
 pub fn extendId(self: Widget, src: std.builtin.SourceLocation, id_extra: usize) u32 {
-    return dvui.hashSrc(self.data().id, src, id_extra);
+    return rui.hashSrc(self.data().id, src, id_extra);
 }
 
 pub fn rectFor(self: Widget, id: u32, min_size: Size, e: Options.Expand, g: Options.Gravity) Rect {

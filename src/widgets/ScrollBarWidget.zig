@@ -1,15 +1,15 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Event = dvui.Event;
-const Options = dvui.Options;
-const Rect = dvui.Rect;
-const ScrollInfo = dvui.ScrollInfo;
-const Size = dvui.Size;
-const Widget = dvui.Widget;
-const WidgetData = dvui.WidgetData;
+const Event = rui.Event;
+const Options = rui.Options;
+const Rect = rui.Rect;
+const ScrollInfo = rui.ScrollInfo;
+const Size = rui.Size;
+const Widget = rui.Widget;
+const WidgetData = rui.WidgetData;
 
-const enums = dvui.enums;
+const enums = rui.enums;
 
 const ScrollBarWidget = @This();
 
@@ -44,7 +44,7 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
     if (self.overlay) {
         // we don't want to take any space from parent
         options.min_size_content = .{ .w = 5, .h = 5 };
-        options.rect = dvui.placeIn(dvui.parentGet().data().contentRect().justSize(), options.min_sizeGet(), opts.expandGet(), opts.gravityGet());
+        options.rect = rui.placeIn(rui.parentGet().data().contentRect().justSize(), options.min_sizeGet(), opts.expandGet(), opts.gravityGet());
     }
     self.wd = WidgetData.init(src, .{}, options);
 
@@ -79,9 +79,9 @@ pub fn data(self: *ScrollBarWidget) *WidgetData {
 
 pub fn processEvents(self: *ScrollBarWidget, grabrs: Rect) void {
     const rs = self.wd.borderRectScale();
-    const evts = dvui.events();
+    const evts = rui.events();
     for (evts) |*e| {
-        if (!dvui.eventMatchSimple(e, self.data()))
+        if (!rui.eventMatchSimple(e, self.data()))
             continue;
 
         switch (e.evt) {
@@ -90,7 +90,7 @@ pub fn processEvents(self: *ScrollBarWidget, grabrs: Rect) void {
                     .focus => {
                         if (self.focus_id) |fid| {
                             e.handled = true;
-                            dvui.focusWidget(fid, null, e.num);
+                            rui.focusWidget(fid, null, e.num);
                         }
                     },
                     .press => {
@@ -98,10 +98,10 @@ pub fn processEvents(self: *ScrollBarWidget, grabrs: Rect) void {
                             e.handled = true;
                             if (grabrs.contains(me.p)) {
                                 // capture and start drag
-                                dvui.captureMouse(self.data());
+                                rui.captureMouse(self.data());
                                 switch (self.dir) {
-                                    .vertical => dvui.dragPreStart(me.p, .{ .cursor = .arrow, .offset = .{ .y = me.p.y - (grabrs.y + grabrs.h / 2) } }),
-                                    .horizontal => dvui.dragPreStart(me.p, .{ .cursor = .arrow, .offset = .{ .x = me.p.x - (grabrs.x + grabrs.w / 2) } }),
+                                    .vertical => rui.dragPreStart(me.p, .{ .cursor = .arrow, .offset = .{ .y = me.p.y - (grabrs.y + grabrs.h / 2) } }),
+                                    .horizontal => rui.dragPreStart(me.p, .{ .cursor = .arrow, .offset = .{ .x = me.p.x - (grabrs.x + grabrs.w / 2) } }),
                                 }
                             } else {
                                 if (if (self.dir == .vertical) (me.p.y < grabrs.y) else (me.p.x < grabrs.x)) {
@@ -112,7 +112,7 @@ pub fn processEvents(self: *ScrollBarWidget, grabrs: Rect) void {
                                     self.si.scrollPageDown(self.dir);
                                 }
 
-                                dvui.refresh(null, @src(), self.wd.id);
+                                rui.refresh(null, @src(), self.wd.id);
                             }
                         }
                     },
@@ -120,15 +120,15 @@ pub fn processEvents(self: *ScrollBarWidget, grabrs: Rect) void {
                         if (me.button.pointer()) {
                             e.handled = true;
                             // stop possible drag and capture
-                            dvui.captureMouse(null);
-                            dvui.dragEnd();
+                            rui.captureMouse(null);
+                            rui.dragEnd();
                         }
                     },
                     .motion => {
-                        if (dvui.captured(self.data().id)) {
+                        if (rui.captured(self.data().id)) {
                             e.handled = true;
                             // move if dragging
-                            if (dvui.dragging(me.p)) |dps| {
+                            if (rui.dragging(me.p)) |dps| {
                                 _ = dps;
                                 const min = switch (self.dir) {
                                     .vertical => rs.r.y + grabrs.h / 2,
@@ -139,27 +139,27 @@ pub fn processEvents(self: *ScrollBarWidget, grabrs: Rect) void {
                                     .horizontal => rs.r.x + rs.r.w - grabrs.w / 2,
                                 };
                                 const grabmid = switch (self.dir) {
-                                    .vertical => me.p.y - dvui.dragOffset().y,
-                                    .horizontal => me.p.x - dvui.dragOffset().x,
+                                    .vertical => me.p.y - rui.dragOffset().y,
+                                    .horizontal => me.p.x - rui.dragOffset().x,
                                 };
                                 var f: f32 = 0;
                                 if (max > min) {
                                     f = (grabmid - min) / (max - min);
                                 }
                                 self.si.scrollToFraction(self.dir, f);
-                                dvui.refresh(null, @src(), self.wd.id);
+                                rui.refresh(null, @src(), self.wd.id);
                             }
                         }
                     },
                     .position => {
-                        dvui.cursorSet(.arrow);
+                        rui.cursorSet(.arrow);
                         self.highlight = true;
                     },
                     .wheel_x => |ticks| {
                         if (self.dir == .horizontal) {
                             e.handled = true;
                             self.si.scrollByOffset(self.dir, ticks);
-                            dvui.refresh(null, @src(), self.wd.id);
+                            rui.refresh(null, @src(), self.wd.id);
                         }
                     },
                     .wheel_y => |ticks| {
@@ -167,7 +167,7 @@ pub fn processEvents(self: *ScrollBarWidget, grabrs: Rect) void {
                         // horizontal scrollBar seems still natural to be scrolled
                         e.handled = true;
                         self.si.scrollByOffset(self.dir, -ticks);
-                        dvui.refresh(null, @src(), self.wd.id);
+                        rui.refresh(null, @src(), self.wd.id);
                     },
                 }
             },
@@ -182,7 +182,7 @@ pub fn processEvents(self: *ScrollBarWidget, grabrs: Rect) void {
 
 pub fn deinit(self: *ScrollBarWidget) void {
     var fill = self.wd.options.color(.text).transparent(0.5);
-    if (dvui.captured(self.wd.id) or self.highlight) {
+    if (rui.captured(self.wd.id) or self.highlight) {
         fill = self.wd.options.color(.text).transparent(0.3);
     }
     self.grabRect = self.grabRect.insetAll(2);

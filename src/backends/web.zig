@@ -1,8 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
-const dvui = @import("dvui");
+const rui = @import("rui");
 
-pub const kind: dvui.enums.Backend = .web;
+pub const kind: rui.enums.Backend = .web;
 
 pub const WebBackend = @This();
 pub const Context = *WebBackend;
@@ -12,14 +12,14 @@ const log = std.log.scoped(.WebBackend);
 var gpa_instance = std.heap.GeneralPurposeAllocator(.{}){};
 const gpa = gpa_instance.allocator();
 
-pub var win: dvui.Window = undefined;
+pub var win: rui.Window = undefined;
 pub var win_ok = false;
 var arena: std.mem.Allocator = undefined;
-var last_touch_enum: dvui.enums.Button = .none;
-var touchPoints: [10]?dvui.Point = [_]?dvui.Point{null} ** 10;
+var last_touch_enum: rui.enums.Button = .none;
+var touchPoints: [10]?rui.Point = [_]?rui.Point{null} ** 10;
 var have_event = false;
 
-cursor_last: dvui.enums.Cursor = .wait,
+cursor_last: rui.enums.Cursor = .wait,
 
 const EventTemp = struct {
     kind: u8,
@@ -32,42 +32,42 @@ const EventTemp = struct {
 pub var event_temps = std.ArrayList(EventTemp).init(gpa);
 
 pub const wasm = if (!builtin.is_test) struct {
-    pub extern "dvui" fn wasm_about_webgl2() u8;
+    pub extern "rui" fn wasm_about_webgl2() u8;
 
-    pub extern "dvui" fn wasm_panic(ptr: [*]const u8, len: usize) void;
-    pub extern "dvui" fn wasm_log_write(ptr: [*]const u8, len: usize) void;
-    pub extern "dvui" fn wasm_log_flush() void;
+    pub extern "rui" fn wasm_panic(ptr: [*]const u8, len: usize) void;
+    pub extern "rui" fn wasm_log_write(ptr: [*]const u8, len: usize) void;
+    pub extern "rui" fn wasm_log_flush() void;
 
-    pub extern "dvui" fn wasm_now() f64;
-    pub extern "dvui" fn wasm_sleep(ms: u32) void;
+    pub extern "rui" fn wasm_now() f64;
+    pub extern "rui" fn wasm_sleep(ms: u32) void;
 
-    pub extern "dvui" fn wasm_pixel_width() f32;
-    pub extern "dvui" fn wasm_pixel_height() f32;
-    pub extern "dvui" fn wasm_canvas_width() f32;
-    pub extern "dvui" fn wasm_canvas_height() f32;
+    pub extern "rui" fn wasm_pixel_width() f32;
+    pub extern "rui" fn wasm_pixel_height() f32;
+    pub extern "rui" fn wasm_canvas_width() f32;
+    pub extern "rui" fn wasm_canvas_height() f32;
 
-    pub extern "dvui" fn wasm_frame_buffer() u8;
-    pub extern "dvui" fn wasm_textureCreate(pixels: [*]u8, width: u32, height: u32, interp: u8) u32;
-    pub extern "dvui" fn wasm_textureCreateTarget(width: u32, height: u32, interp: u8) u32;
-    pub extern "dvui" fn wasm_textureRead(texture: u32, pixels_out: [*]u8, width: u32, height: u32) void;
-    pub extern "dvui" fn wasm_renderTarget(u32) void;
-    pub extern "dvui" fn wasm_textureDestroy(u32) void;
-    pub extern "dvui" fn wasm_renderGeometry(texture: u32, index_ptr: [*]const u8, index_len: usize, vertex_ptr: [*]const u8, vertex_len: usize, sizeof_vertex: u8, offset_pos: u8, offset_col: u8, offset_uv: u8, clip: u8, x: i32, y: i32, w: i32, h: i32) void;
+    pub extern "rui" fn wasm_frame_buffer() u8;
+    pub extern "rui" fn wasm_textureCreate(pixels: [*]u8, width: u32, height: u32, interp: u8) u32;
+    pub extern "rui" fn wasm_textureCreateTarget(width: u32, height: u32, interp: u8) u32;
+    pub extern "rui" fn wasm_textureRead(texture: u32, pixels_out: [*]u8, width: u32, height: u32) void;
+    pub extern "rui" fn wasm_renderTarget(u32) void;
+    pub extern "rui" fn wasm_textureDestroy(u32) void;
+    pub extern "rui" fn wasm_renderGeometry(texture: u32, index_ptr: [*]const u8, index_len: usize, vertex_ptr: [*]const u8, vertex_len: usize, sizeof_vertex: u8, offset_pos: u8, offset_col: u8, offset_uv: u8, clip: u8, x: i32, y: i32, w: i32, h: i32) void;
 
-    pub extern "dvui" fn wasm_cursor(name: [*]const u8, name_len: usize) void;
-    pub extern "dvui" fn wasm_text_input(x: f32, y: f32, w: f32, h: f32) void;
-    pub extern "dvui" fn wasm_open_url(ptr: [*]const u8, len: usize) void;
-    pub extern "dvui" fn wasm_download_data(name_ptr: [*]const u8, name_len: usize, data_ptr: [*]const u8, data_len: usize) void;
-    pub extern "dvui" fn wasm_clipboardTextSet(ptr: [*]const u8, len: usize) void;
+    pub extern "rui" fn wasm_cursor(name: [*]const u8, name_len: usize) void;
+    pub extern "rui" fn wasm_text_input(x: f32, y: f32, w: f32, h: f32) void;
+    pub extern "rui" fn wasm_open_url(ptr: [*]const u8, len: usize) void;
+    pub extern "rui" fn wasm_download_data(name_ptr: [*]const u8, name_len: usize, data_ptr: [*]const u8, data_len: usize) void;
+    pub extern "rui" fn wasm_clipboardTextSet(ptr: [*]const u8, len: usize) void;
 
     // NOTE: bool in extern becomes 0 and 1 in js, which is falsy and truthy respectively
-    pub extern "dvui" fn wasm_open_file_picker(id: u32, accept_ptr: [*]const u8, accept_len: usize, multiple: bool) void;
-    pub extern "dvui" fn wasm_get_number_of_files_available(id: u32) usize;
-    pub extern "dvui" fn wasm_get_file_name(id: u32, file_index: usize) [*:0]u8;
-    pub extern "dvui" fn wasm_get_file_size(id: u32, file_index: usize) isize;
-    pub extern "dvui" fn wasm_read_file_data(id: u32, file_index: usize, data: [*]u8) void;
+    pub extern "rui" fn wasm_open_file_picker(id: u32, accept_ptr: [*]const u8, accept_len: usize, multiple: bool) void;
+    pub extern "rui" fn wasm_get_number_of_files_available(id: u32) usize;
+    pub extern "rui" fn wasm_get_file_name(id: u32, file_index: usize) [*:0]u8;
+    pub extern "rui" fn wasm_get_file_size(id: u32, file_index: usize) isize;
+    pub extern "rui" fn wasm_read_file_data(id: u32, file_index: usize, data: [*]u8) void;
 
-    pub extern "dvui" fn wasm_add_noto_font() void;
+    pub extern "rui" fn wasm_add_noto_font() void;
 } else struct { // Mock api for testing that this backend is semantically correct, cannot test behaviour
     pub fn wasm_about_webgl2() u8 {
         return undefined;
@@ -130,108 +130,108 @@ pub const wasm = if (!builtin.is_test) struct {
     pub fn wasm_add_noto_font() void {}
 };
 
-export fn dvui_c_alloc(size: usize) ?*anyopaque {
+export fn rui_c_alloc(size: usize) ?*anyopaque {
     const buffer = gpa.alignedAlloc(u8, 8, size + 8) catch {
-        //log.debug("dvui_c_alloc {d} failed", .{size});
+        //log.debug("rui_c_alloc {d} failed", .{size});
         return null;
     };
     std.mem.writeInt(u64, buffer[0..@sizeOf(u64)], buffer.len, builtin.cpu.arch.endian());
-    //log.debug("dvui_c_alloc {*} {d}", .{ buffer.ptr + 8, size });
+    //log.debug("rui_c_alloc {*} {d}", .{ buffer.ptr + 8, size });
     return buffer.ptr + 8;
 }
 
-pub export fn dvui_c_free(ptr: ?*anyopaque) void {
+pub export fn rui_c_free(ptr: ?*anyopaque) void {
     const buffer = @as([*]align(8) u8, @alignCast(@ptrCast(ptr orelse return))) - 8;
     const len = std.mem.readInt(u64, buffer[0..@sizeOf(u64)], builtin.cpu.arch.endian());
-    //log.debug("dvui_c_free {?*} {d}", .{ ptr, len - 8 });
+    //log.debug("rui_c_free {?*} {d}", .{ ptr, len - 8 });
 
     gpa.free(buffer[0..@intCast(len)]);
 }
 
-export fn dvui_c_realloc_sized(ptr: ?*anyopaque, oldsize: usize, newsize: usize) ?*anyopaque {
+export fn rui_c_realloc_sized(ptr: ?*anyopaque, oldsize: usize, newsize: usize) ?*anyopaque {
     //_ = oldsize;
-    //log.debug("dvui_c_realloc_sized {d} {d}", .{ oldsize, newsize });
+    //log.debug("rui_c_realloc_sized {d} {d}", .{ oldsize, newsize });
 
     if (ptr == null) {
-        return dvui_c_alloc(newsize);
+        return rui_c_alloc(newsize);
     }
 
     //const buffer = @as([*]u8, @ptrCast(ptr.?)) - 8;
     //const len = std.mem.readInt(u64, buffer[0..@sizeOf(u64)], builtin.cpu.arch.endian());
 
     //const slice = buffer[0..@intCast(len)];
-    //log.debug("dvui_c_realloc_sized buffer {*} {d}", .{ ptr, len });
+    //log.debug("rui_c_realloc_sized buffer {*} {d}", .{ ptr, len });
 
     //_ = gpa.resize(slice, newsize + 16);
-    const newptr = dvui_c_alloc(newsize);
+    const newptr = rui_c_alloc(newsize);
     const newbuf = @as([*]u8, @ptrCast(newptr));
     @memcpy(newbuf[0..oldsize], @as([*]u8, @ptrCast(ptr))[0..oldsize]);
-    dvui_c_free(ptr);
+    rui_c_free(ptr);
     return newptr;
 
     //std.mem.writeInt(usize, slice[0..@sizeOf(usize)], slice.len, builtin.cpu.arch.endian());
     //return slice.ptr + 16;
 }
 
-export fn dvui_c_panic(msg: [*c]const u8) noreturn {
+export fn rui_c_panic(msg: [*c]const u8) noreturn {
     wasm.wasm_panic(msg, std.mem.len(msg));
     unreachable;
 }
 
-export fn dvui_c_sqrt(x: f64) f64 {
+export fn rui_c_sqrt(x: f64) f64 {
     return @sqrt(x);
 }
 
-export fn dvui_c_pow(x: f64, y: f64) f64 {
+export fn rui_c_pow(x: f64, y: f64) f64 {
     return @exp(@log(x) * y);
 }
 
-export fn dvui_c_ldexp(x: f64, n: c_int) f64 {
+export fn rui_c_ldexp(x: f64, n: c_int) f64 {
     return x * @exp2(@as(f64, @floatFromInt(n)));
 }
 
-export fn dvui_c_floor(x: f64) f64 {
+export fn rui_c_floor(x: f64) f64 {
     return @floor(x);
 }
 
-export fn dvui_c_ceil(x: f64) f64 {
+export fn rui_c_ceil(x: f64) f64 {
     return @ceil(x);
 }
 
-export fn dvui_c_fmod(x: f64, y: f64) f64 {
+export fn rui_c_fmod(x: f64, y: f64) f64 {
     return @mod(x, y);
 }
 
-export fn dvui_c_cos(x: f64) f64 {
+export fn rui_c_cos(x: f64) f64 {
     return @cos(x);
 }
 
-export fn dvui_c_acos(x: f64) f64 {
+export fn rui_c_acos(x: f64) f64 {
     return std.math.acos(x);
 }
 
-export fn dvui_c_fabs(x: f64) f64 {
+export fn rui_c_fabs(x: f64) f64 {
     return @abs(x);
 }
 
-export fn dvui_c_strlen(x: [*c]const u8) usize {
+export fn rui_c_strlen(x: [*c]const u8) usize {
     return std.mem.len(x);
 }
 
-export fn dvui_c_memcpy(dest: [*c]u8, src: [*c]const u8, n: usize) [*c]u8 {
+export fn rui_c_memcpy(dest: [*c]u8, src: [*c]const u8, n: usize) [*c]u8 {
     @memcpy(dest[0..n], src[0..n]);
     return dest;
 }
 
-export fn dvui_c_memmove(dest: [*c]u8, src: [*c]const u8, n: usize) [*c]u8 {
-    //log.debug("dvui_c_memmove dest {*} src {*} {d}", .{ dest, src, n });
-    const buf = dvui.currentWindow().arena().alloc(u8, n) catch unreachable;
+export fn rui_c_memmove(dest: [*c]u8, src: [*c]const u8, n: usize) [*c]u8 {
+    //log.debug("rui_c_memmove dest {*} src {*} {d}", .{ dest, src, n });
+    const buf = rui.currentWindow().arena().alloc(u8, n) catch unreachable;
     @memcpy(buf, src[0..n]);
     @memcpy(dest[0..n], buf);
     return dest;
 }
 
-export fn dvui_c_memset(dest: [*c]u8, x: u8, n: usize) [*c]u8 {
+export fn rui_c_memset(dest: [*c]u8, x: u8, n: usize) [*c]u8 {
     @memset(dest[0..n], x);
     return dest;
 }
@@ -252,7 +252,7 @@ export fn arena_u8(len: usize) [*c]u8 {
 
 export fn new_font(ptr: [*c]u8, len: usize) void {
     if (win_ok) {
-        win.font_bytes.put("Noto", dvui.FontBytesEntry{ .ttf_bytes = ptr[0..len], .allocator = gpa }) catch unreachable;
+        win.font_bytes.put("Noto", rui.FontBytesEntry{ .ttf_bytes = ptr[0..len], .allocator = gpa }) catch unreachable;
     }
 }
 
@@ -264,7 +264,7 @@ export fn add_event(which: u8, int1: u32, int2: u32, float1: f32, float2: f32) v
     }
 }
 
-fn add_event_raw(w: *dvui.Window, which: u8, int1: u32, int2: u32, float1: f32, float2: f32) !void {
+fn add_event_raw(w: *rui.Window, which: u8, int1: u32, int2: u32, float1: f32, float2: f32) !void {
     have_event = true;
     //event_temps.append(.{
     //    .which = which,
@@ -285,16 +285,16 @@ fn add_event_raw(w: *dvui.Window, which: u8, int1: u32, int2: u32, float1: f32, 
             const str = @as([*]u8, @ptrFromInt(int1))[0..int2];
             _ = try w.addEventKey(.{
                 .action = if (float1 > 0) .repeat else .down,
-                .code = web_key_code_to_dvui(str),
-                .mod = web_mod_code_to_dvui(@intFromFloat(float2)),
+                .code = web_key_code_to_rui(str),
+                .mod = web_mod_code_to_rui(@intFromFloat(float2)),
             });
         },
         6 => {
             const str = @as([*]u8, @ptrFromInt(int1))[0..int2];
             _ = try w.addEventKey(.{
                 .action = .up,
-                .code = web_key_code_to_dvui(str),
-                .mod = web_mod_code_to_dvui(@intFromFloat(float2)),
+                .code = web_key_code_to_rui(str),
+                .mod = web_mod_code_to_rui(@intFromFloat(float2)),
             });
         },
         7 => {
@@ -302,19 +302,19 @@ fn add_event_raw(w: *dvui.Window, which: u8, int1: u32, int2: u32, float1: f32, 
             _ = try w.addEventText(str);
         },
         8 => {
-            const touch: dvui.enums.Button = @enumFromInt(@intFromEnum(dvui.enums.Button.touch0) + int1);
+            const touch: rui.enums.Button = @enumFromInt(@intFromEnum(rui.enums.Button.touch0) + int1);
             last_touch_enum = touch;
             _ = try w.addEventPointer(touch, .press, .{ .x = float1, .y = float2 });
             touchPoints[int1] = .{ .x = float1, .y = float2 };
         },
         9 => {
-            const touch: dvui.enums.Button = @enumFromInt(@intFromEnum(dvui.enums.Button.touch0) + int1);
+            const touch: rui.enums.Button = @enumFromInt(@intFromEnum(rui.enums.Button.touch0) + int1);
             last_touch_enum = touch;
             _ = try w.addEventPointer(touch, .release, .{ .x = float1, .y = float2 });
             touchPoints[int1] = null;
         },
         10 => {
-            const touch: dvui.enums.Button = @enumFromInt(@intFromEnum(dvui.enums.Button.touch0) + int1);
+            const touch: rui.enums.Button = @enumFromInt(@intFromEnum(rui.enums.Button.touch0) + int1);
             last_touch_enum = touch;
             var dx: f32 = 0;
             var dy: f32 = 0;
@@ -336,7 +336,7 @@ pub fn hasEvent(_: *WebBackend) bool {
     return have_event;
 }
 
-fn buttonFromJS(jsButton: u32) dvui.enums.Button {
+fn buttonFromJS(jsButton: u32) rui.enums.Button {
     return switch (jsButton) {
         0 => .left,
         1 => .middle,
@@ -353,7 +353,7 @@ fn hashKeyCode(str: []const u8) u32 {
     return fnv.final();
 }
 
-fn web_key_code_to_dvui(code: []u8) dvui.enums.Key {
+fn web_key_code_to_rui(code: []u8) rui.enums.Key {
     @setEvalBranchQuota(2000);
     var fnv = std.hash.Fnv1a_32.init();
     fnv.update(code);
@@ -463,25 +463,25 @@ fn web_key_code_to_dvui(code: []u8) dvui.enums.Key {
         hashKeyCode("`"), hashKeyCode("~") => .grave,
 
         else => blk: {
-            log.debug("web_key_code_to_dvui unknown key code {s}\n", .{code});
+            log.debug("web_key_code_to_rui unknown key code {s}\n", .{code});
             break :blk .unknown;
         },
     };
 }
 
-fn web_mod_code_to_dvui(wmod: u8) dvui.enums.Mod {
+fn web_mod_code_to_rui(wmod: u8) rui.enums.Mod {
     if (wmod == 0) return .none;
 
     var m: u16 = 0;
-    if (wmod & 0b0001 > 0) m |= @intFromEnum(dvui.enums.Mod.lshift);
-    if (wmod & 0b0010 > 0) m |= @intFromEnum(dvui.enums.Mod.lcontrol);
-    if (wmod & 0b0100 > 0) m |= @intFromEnum(dvui.enums.Mod.lalt);
-    if (wmod & 0b1000 > 0) m |= @intFromEnum(dvui.enums.Mod.lcommand);
+    if (wmod & 0b0001 > 0) m |= @intFromEnum(rui.enums.Mod.lshift);
+    if (wmod & 0b0010 > 0) m |= @intFromEnum(rui.enums.Mod.lcontrol);
+    if (wmod & 0b0100 > 0) m |= @intFromEnum(rui.enums.Mod.lalt);
+    if (wmod & 0b1000 > 0) m |= @intFromEnum(rui.enums.Mod.lcommand);
 
-    return @as(dvui.enums.Mod, @enumFromInt(m));
+    return @as(rui.enums.Mod, @enumFromInt(m));
 }
 
-//pub fn addAllEvents(self: *WebBackend, win: *dvui.Window) !void {
+//pub fn addAllEvents(self: *WebBackend, win: *rui.Window) !void {
 //    for (event_temps.items) |e| {
 //        switch (e.kind) {
 //            1 => _ = try win.addEventMouseMotion(e.float1, e.float2),
@@ -492,16 +492,16 @@ fn web_mod_code_to_dvui(wmod: u8) dvui.enums.Mod {
 //                const str = @as([*]u8, @ptrFromInt(e.int1))[0..e.int2];
 //                _ = try win.addEventKey(.{
 //                    .action = if (e.float1 > 0) .repeat else .down,
-//                    .code = web_key_code_to_dvui(str),
-//                    .mod = web_mod_code_to_dvui(@intFromFloat(e.float2)),
+//                    .code = web_key_code_to_rui(str),
+//                    .mod = web_mod_code_to_rui(@intFromFloat(e.float2)),
 //                });
 //            },
 //            6 => {
 //                const str = @as([*]u8, @ptrFromInt(e.int1))[0..e.int2];
 //                _ = try win.addEventKey(.{
 //                    .action = .up,
-//                    .code = web_key_code_to_dvui(str),
-//                    .mod = web_mod_code_to_dvui(@intFromFloat(e.float2)),
+//                    .code = web_key_code_to_rui(str),
+//                    .mod = web_mod_code_to_rui(@intFromFloat(e.float2)),
 //                });
 //            },
 //            7 => {
@@ -509,19 +509,19 @@ fn web_mod_code_to_dvui(wmod: u8) dvui.enums.Mod {
 //                _ = try win.addEventText(str);
 //            },
 //            8 => {
-//                const touch: dvui.enums.Button = @enumFromInt(@intFromEnum(dvui.enums.Button.touch0) + e.int1);
+//                const touch: rui.enums.Button = @enumFromInt(@intFromEnum(rui.enums.Button.touch0) + e.int1);
 //                self.last_touch_enum = touch;
 //                _ = try win.addEventPointer(touch, .press, .{ .x = e.float1, .y = e.float2 });
 //                self.touchPoints[e.int1] = .{ .x = e.float1, .y = e.float2 };
 //            },
 //            9 => {
-//                const touch: dvui.enums.Button = @enumFromInt(@intFromEnum(dvui.enums.Button.touch0) + e.int1);
+//                const touch: rui.enums.Button = @enumFromInt(@intFromEnum(rui.enums.Button.touch0) + e.int1);
 //                self.last_touch_enum = touch;
 //                _ = try win.addEventPointer(touch, .release, .{ .x = e.float1, .y = e.float2 });
 //                self.touchPoints[e.int1] = null;
 //            },
 //            10 => {
-//                const touch: dvui.enums.Button = @enumFromInt(@intFromEnum(dvui.enums.Button.touch0) + e.int1);
+//                const touch: rui.enums.Button = @enumFromInt(@intFromEnum(rui.enums.Button.touch0) + e.int1);
 //                self.last_touch_enum = touch;
 //                var dx: f32 = 0;
 //                var dy: f32 = 0;
@@ -548,8 +548,8 @@ pub fn deinit(self: *WebBackend) void {
     _ = self;
 }
 
-pub fn backend(self: *WebBackend) dvui.Backend {
-    return dvui.Backend.init(self, @This());
+pub fn backend(self: *WebBackend) rui.Backend {
+    return rui.Backend.init(self, @This());
 }
 
 pub fn nanoTime(self: *WebBackend) i128 {
@@ -571,19 +571,19 @@ pub fn end(_: *WebBackend) void {
     have_event = false;
 }
 
-pub fn pixelSize(_: *WebBackend) dvui.Size {
-    return dvui.Size{ .w = wasm.wasm_pixel_width(), .h = wasm.wasm_pixel_height() };
+pub fn pixelSize(_: *WebBackend) rui.Size {
+    return rui.Size{ .w = wasm.wasm_pixel_width(), .h = wasm.wasm_pixel_height() };
 }
 
-pub fn windowSize(_: *WebBackend) dvui.Size {
-    return dvui.Size{ .w = wasm.wasm_canvas_width(), .h = wasm.wasm_canvas_height() };
+pub fn windowSize(_: *WebBackend) rui.Size {
+    return rui.Size{ .w = wasm.wasm_canvas_width(), .h = wasm.wasm_canvas_height() };
 }
 
 pub fn contentScale(_: *WebBackend) f32 {
     return 1.0;
 }
 
-pub fn drawClippedTriangles(_: *WebBackend, texture: ?dvui.Texture, vtx: []const dvui.Vertex, idx: []const u16, maybe_clipr: ?dvui.Rect) void {
+pub fn drawClippedTriangles(_: *WebBackend, texture: ?rui.Texture, vtx: []const rui.Vertex, idx: []const u16, maybe_clipr: ?rui.Rect) void {
     var x: i32 = std.math.maxInt(i32);
     var w: i32 = std.math.maxInt(i32);
     var y: i32 = std.math.maxInt(i32);
@@ -605,7 +605,7 @@ pub fn drawClippedTriangles(_: *WebBackend, texture: ?dvui.Texture, vtx: []const
         }
     }
 
-    //log.debug("drawClippedTriangles pixels {} clipr {?} clip {d} {d} {d} {d}", .{ dvui.windowRectPixels(), maybe_clipr, x, y, w, h });
+    //log.debug("drawClippedTriangles pixels {} clipr {?} clip {d} {d} {d} {d}", .{ rui.windowRectPixels(), maybe_clipr, x, y, w, h });
 
     const index_slice = std.mem.sliceAsBytes(idx);
     const vertex_slice = std.mem.sliceAsBytes(vtx);
@@ -616,10 +616,10 @@ pub fn drawClippedTriangles(_: *WebBackend, texture: ?dvui.Texture, vtx: []const
         index_slice.len,
         vertex_slice.ptr,
         vertex_slice.len,
-        @sizeOf(dvui.Vertex),
-        @offsetOf(dvui.Vertex, "pos"),
-        @offsetOf(dvui.Vertex, "col"),
-        @offsetOf(dvui.Vertex, "uv"),
+        @sizeOf(rui.Vertex),
+        @offsetOf(rui.Vertex, "pos"),
+        @offsetOf(rui.Vertex, "col"),
+        @offsetOf(rui.Vertex, "uv"),
         if (maybe_clipr == null) 0 else 1,
         x,
         y,
@@ -628,7 +628,7 @@ pub fn drawClippedTriangles(_: *WebBackend, texture: ?dvui.Texture, vtx: []const
     );
 }
 
-pub fn textureCreate(self: *WebBackend, pixels: [*]u8, width: u32, height: u32, interpolation: dvui.enums.TextureInterpolation) dvui.Texture {
+pub fn textureCreate(self: *WebBackend, pixels: [*]u8, width: u32, height: u32, interpolation: rui.enums.TextureInterpolation) rui.Texture {
     _ = self;
 
     const wasm_interp: u8 = switch (interpolation) {
@@ -637,10 +637,10 @@ pub fn textureCreate(self: *WebBackend, pixels: [*]u8, width: u32, height: u32, 
     };
 
     const id = wasm.wasm_textureCreate(pixels, width, height, wasm_interp);
-    return dvui.Texture{ .ptr = @ptrFromInt(id), .width = width, .height = height };
+    return rui.Texture{ .ptr = @ptrFromInt(id), .width = width, .height = height };
 }
 
-pub fn textureCreateTarget(self: *WebBackend, width: u32, height: u32, interpolation: dvui.enums.TextureInterpolation) !dvui.TextureTarget {
+pub fn textureCreateTarget(self: *WebBackend, width: u32, height: u32, interpolation: rui.enums.TextureInterpolation) !rui.TextureTarget {
     _ = self;
     const wasm_interp: u8 = switch (interpolation) {
         .nearest => 0,
@@ -648,14 +648,14 @@ pub fn textureCreateTarget(self: *WebBackend, width: u32, height: u32, interpola
     };
 
     const id = wasm.wasm_textureCreateTarget(width, height, wasm_interp);
-    return dvui.TextureTarget{ .ptr = @ptrFromInt(id), .width = width, .height = height };
+    return rui.TextureTarget{ .ptr = @ptrFromInt(id), .width = width, .height = height };
 }
 
-pub fn textureFromTarget(_: *WebBackend, texture: dvui.TextureTarget) dvui.Texture {
+pub fn textureFromTarget(_: *WebBackend, texture: rui.TextureTarget) rui.Texture {
     return .{ .ptr = texture.ptr, .width = texture.width, .height = texture.height };
 }
 
-pub fn renderTarget(self: *WebBackend, texture: ?dvui.TextureTarget) void {
+pub fn renderTarget(self: *WebBackend, texture: ?rui.TextureTarget) void {
     _ = self;
     if (texture) |tex| {
         wasm.wasm_renderTarget(@intCast(@intFromPtr(tex.ptr)));
@@ -664,15 +664,15 @@ pub fn renderTarget(self: *WebBackend, texture: ?dvui.TextureTarget) void {
     }
 }
 
-pub fn textureReadTarget(_: *WebBackend, texture: dvui.TextureTarget, pixels_out: [*]u8) error{TextureRead}!void {
+pub fn textureReadTarget(_: *WebBackend, texture: rui.TextureTarget, pixels_out: [*]u8) error{TextureRead}!void {
     wasm.wasm_textureRead(@intCast(@intFromPtr(texture.ptr)), pixels_out, texture.width, texture.height);
 }
 
-pub fn textureDestroy(_: *WebBackend, texture: dvui.Texture) void {
+pub fn textureDestroy(_: *WebBackend, texture: rui.Texture) void {
     wasm.wasm_textureDestroy(@intCast(@intFromPtr(texture.ptr)));
 }
 
-pub fn textInputRect(_: *WebBackend, rect: ?dvui.Rect) void {
+pub fn textInputRect(_: *WebBackend, rect: ?rui.Rect) void {
     if (rect) |r| {
         wasm.wasm_text_input(r.x, r.y, r.w, r.h);
     } else {
@@ -714,7 +714,7 @@ pub fn refresh(self: *WebBackend) void {
     _ = self;
 }
 
-pub fn setCursor(self: *WebBackend, cursor: dvui.enums.Cursor) void {
+pub fn setCursor(self: *WebBackend, cursor: rui.enums.Cursor) void {
     if (cursor != self.cursor_last) {
         self.cursor_last = cursor;
 
@@ -761,12 +761,12 @@ pub fn getNumberOfFilesAvailable(id: u32) usize {
     return wasm.wasm_get_number_of_files_available(id);
 }
 
-// dvui_app stuff
+// rui_app stuff
 comptime {
-    if (dvui.App.get() != null) {
-        @export(&dvui_init, .{ .name = "dvui_init" });
-        @export(&dvui_deinit, .{ .name = "dvui_deinit" });
-        @export(&dvui_update, .{ .name = "dvui_update" });
+    if (rui.App.get() != null) {
+        @export(&rui_init, .{ .name = "rui_init" });
+        @export(&rui_deinit, .{ .name = "rui_deinit" });
+        @export(&rui_update, .{ .name = "rui_update" });
     }
 }
 
@@ -808,8 +808,8 @@ pub const panic = std.debug.FullPanic(struct {
 
 pub var back: WebBackend = undefined;
 
-fn dvui_init(platform_ptr: [*]const u8, platform_len: usize) callconv(.c) i32 {
-    const app = dvui.App.get() orelse return 404;
+fn rui_init(platform_ptr: [*]const u8, platform_len: usize) callconv(.c) i32 {
+    const app = rui.App.get() orelse return 404;
     const init_opts = app.config.get();
     // TODO: Allow web backend to set title of browser tab via init_opts
     // TODO: Respect min size (maybe max size?) via css on the canvas element
@@ -823,7 +823,7 @@ fn dvui_init(platform_ptr: [*]const u8, platform_len: usize) callconv(.c) i32 {
     back = WebBackend.init() catch {
         return 1;
     };
-    win = dvui.Window.init(@src(), gpa, back.backend(), .{ .keybinds = if (mac) .mac else .windows }) catch {
+    win = rui.Window.init(@src(), gpa, back.backend(), .{ .keybinds = if (mac) .mac else .windows }) catch {
         return 2;
     };
 
@@ -834,8 +834,8 @@ fn dvui_init(platform_ptr: [*]const u8, platform_len: usize) callconv(.c) i32 {
     return 0;
 }
 
-fn dvui_deinit() callconv(.c) void {
-    const app = dvui.App.get() orelse return;
+fn rui_deinit() callconv(.c) void {
+    const app = rui.App.get() orelse return;
     if (app.deinitFn) |deinitFn| deinitFn();
 
     win.deinit();
@@ -844,23 +844,23 @@ fn dvui_deinit() callconv(.c) void {
 
 // return number of micros to wait (interrupted by events) for next frame
 // return -1 to quit
-fn dvui_update() callconv(.c) i32 {
+fn rui_update() callconv(.c) i32 {
     return update() catch |err| {
         // The main loop is stopping, this is our last chance to deinit stuff
-        dvui_deinit();
+        rui_deinit();
         std.debug.panic("{!}", .{err});
     };
 }
 
 fn update() !i32 {
-    const app = dvui.App.get() orelse return error.DvuiAppNotDefined;
+    const app = rui.App.get() orelse return error.ruiAppNotDefined;
 
     const nstime = win.beginWait(back.hasEvent());
 
     try win.begin(nstime);
 
     // Instead of the backend saving the events and then calling this, the web
-    // backend is directly sending the events to dvui
+    // backend is directly sending the events to rui
     //try backend.addAllEvents(&win);
 
     const res = try app.frameFn();

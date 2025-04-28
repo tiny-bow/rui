@@ -46,7 +46,7 @@ pub const Data = struct {
 
 pub const Line = struct {
     plot: *PlotWidget,
-    path: std.ArrayList(dvui.Point),
+    path: std.ArrayList(rui.Point),
 
     pub fn point(self: *Line, x: f64, y: f64) !void {
         const data: Data = .{ .x = x, .y = y };
@@ -54,7 +54,7 @@ pub const Line = struct {
         const screen_p = self.plot.dataToScreen(data);
         if (self.plot.mouse_point) |mp| {
             const dp = Point.diff(mp, screen_p);
-            const dps = dp.scale(1 / dvui.windowNaturalScale());
+            const dps = dp.scale(1 / rui.windowNaturalScale());
             if (@abs(dps.x) <= 3 and @abs(dps.y) <= 3) {
                 self.plot.hover_data = data;
             }
@@ -62,8 +62,8 @@ pub const Line = struct {
         try self.path.append(screen_p);
     }
 
-    pub fn stroke(self: *Line, thick: f32, color: dvui.Color) !void {
-        try dvui.pathStroke(self.path.items, thick * self.plot.data_rs.s, color, .{});
+    pub fn stroke(self: *Line, thick: f32, color: rui.Color) !void {
+        try rui.pathStroke(self.path.items, thick * self.plot.data_rs.s, color, .{});
     }
 
     pub fn deinit(self: *Line) void {
@@ -79,7 +79,7 @@ pub fn init(src: std.builtin.SourceLocation, init_opts: InitOptions, opts: Optio
     return self;
 }
 
-pub fn dataToScreen(self: *PlotWidget, data: Data) dvui.Point {
+pub fn dataToScreen(self: *PlotWidget, data: Data) rui.Point {
     const xfrac = self.x_axis.fraction(data.x);
     const yfrac = self.y_axis.fraction(data.y);
     return .{
@@ -99,7 +99,7 @@ pub fn install(self: *PlotWidget) !void {
     if (self.init_options.x_axis) |xa| {
         self.x_axis = xa;
     } else {
-        if (dvui.dataGet(null, self.box.data().id, "_x_axis", Axis)) |xaxis| {
+        if (rui.dataGet(null, self.box.data().id, "_x_axis", Axis)) |xaxis| {
             self.x_axis_store = xaxis;
         }
         self.x_axis = &self.x_axis_store;
@@ -108,7 +108,7 @@ pub fn install(self: *PlotWidget) !void {
     if (self.init_options.y_axis) |ya| {
         self.y_axis = ya;
     } else {
-        if (dvui.dataGet(null, self.box.data().id, "_y_axis", Axis)) |yaxis| {
+        if (rui.dataGet(null, self.box.data().id, "_y_axis", Axis)) |yaxis| {
             self.y_axis_store = yaxis;
         }
         self.y_axis = &self.y_axis_store;
@@ -118,11 +118,11 @@ pub fn install(self: *PlotWidget) !void {
     try self.box.drawBackground();
 
     if (self.init_options.title) |title| {
-        try dvui.label(@src(), "{s}", .{title}, .{ .gravity_x = 0.5, .font_style = .title_4 });
+        try rui.label(@src(), "{s}", .{title}, .{ .gravity_x = 0.5, .font_style = .title_4 });
     }
 
     //const str = "000";
-    const tick_font = (dvui.Options{ .font_style = .caption }).fontGet();
+    const tick_font = (rui.Options{ .font_style = .caption }).fontGet();
     //const tick_size = tick_font.sizeM(str.len, 1);
 
     const yticks = [_]?f64{ self.y_axis.min, self.y_axis.max };
@@ -130,42 +130,42 @@ pub fn install(self: *PlotWidget) !void {
     if (self.y_axis.name) |_| {
         for (yticks) |m_ytick| {
             if (m_ytick) |ytick| {
-                const tick_str = try std.fmt.allocPrint(dvui.currentWindow().arena(), "{d}", .{ytick});
+                const tick_str = try std.fmt.allocPrint(rui.currentWindow().arena(), "{d}", .{ytick});
                 tick_width = @max(tick_width, tick_font.textSize(tick_str).w);
             }
         }
     }
 
-    var hbox1 = try dvui.box(@src(), .horizontal, .{ .expand = .both });
+    var hbox1 = try rui.box(@src(), .horizontal, .{ .expand = .both });
 
     // y axis
-    var yaxis = try dvui.box(@src(), .horizontal, .{ .expand = .vertical, .min_size_content = .{ .w = tick_width } });
+    var yaxis = try rui.box(@src(), .horizontal, .{ .expand = .vertical, .min_size_content = .{ .w = tick_width } });
     var yaxis_rect = yaxis.data().rect;
     if (self.y_axis.name) |yname| {
         if (yname.len > 0) {
-            try dvui.label(@src(), "{s}", .{yname}, .{ .gravity_y = 0.5 });
+            try rui.label(@src(), "{s}", .{yname}, .{ .gravity_y = 0.5 });
         }
     }
     yaxis.deinit();
 
     // right padding (if adding, need to add a spacer to the right of xaxis as well)
-    //var xaxis_padding = try dvui.box(@src(), .horizontal, .{ .gravity_x = 1.0, .expand = .vertical, .min_size_content = .{ .w = tick_size.w / 2 } });
+    //var xaxis_padding = try rui.box(@src(), .horizontal, .{ .gravity_x = 1.0, .expand = .vertical, .min_size_content = .{ .w = tick_size.w / 2 } });
     //xaxis_padding.deinit();
 
     // data area
-    var data_box = try dvui.box(@src(), .horizontal, .{ .expand = .both });
+    var data_box = try rui.box(@src(), .horizontal, .{ .expand = .both });
 
     // mouse hover
     if (self.init_options.mouse_hover) {
-        const evts = dvui.events();
+        const evts = rui.events();
         for (evts) |*e| {
-            if (!dvui.eventMatchSimple(e, data_box.data()))
+            if (!rui.eventMatchSimple(e, data_box.data()))
                 continue;
 
             switch (e.evt) {
                 .mouse => |me| {
                     if (me.action == .position) {
-                        dvui.cursorSet(.arrow);
+                        rui.cursorSet(.arrow);
                         self.mouse_point = me.p;
                     }
                 },
@@ -187,10 +187,10 @@ pub fn install(self: *PlotWidget) !void {
 
     hbox1.deinit();
 
-    var hbox2 = try dvui.box(@src(), .horizontal, .{ .expand = .horizontal });
+    var hbox2 = try rui.box(@src(), .horizontal, .{ .expand = .horizontal });
 
     // bottom left corner under y axis
-    _ = try dvui.spacer(@src(), .{ .w = yaxis_rect.w }, .{ .expand = .vertical });
+    _ = try rui.spacer(@src(), .{ .w = yaxis_rect.w }, .{ .expand = .vertical });
 
     var x_tick_height: f32 = 0;
     if (self.x_axis.name) |_| {
@@ -200,10 +200,10 @@ pub fn install(self: *PlotWidget) !void {
     }
 
     // x axis
-    var xaxis = try dvui.box(@src(), .vertical, .{ .gravity_y = 1.0, .expand = .horizontal, .min_size_content = .{ .h = x_tick_height } });
+    var xaxis = try rui.box(@src(), .vertical, .{ .gravity_y = 1.0, .expand = .horizontal, .min_size_content = .{ .h = x_tick_height } });
     if (self.x_axis.name) |xname| {
         if (xname.len > 0) {
-            try dvui.label(@src(), "{s}", .{xname}, .{ .gravity_x = 0.5, .gravity_y = 0.5 });
+            try rui.label(@src(), "{s}", .{xname}, .{ .gravity_x = 0.5, .gravity_y = 0.5 });
         }
     }
     xaxis.deinit();
@@ -215,7 +215,7 @@ pub fn install(self: *PlotWidget) !void {
         for (yticks) |m_ytick| {
             if (m_ytick) |ytick| {
                 const tick: Data = .{ .x = self.x_axis.min orelse 0, .y = ytick };
-                const tick_str = try std.fmt.allocPrint(dvui.currentWindow().arena(), "{d}", .{ytick});
+                const tick_str = try std.fmt.allocPrint(rui.currentWindow().arena(), "{d}", .{ytick});
                 const tick_str_size = tick_font.textSize(tick_str).scale(self.data_rs.s);
                 var tick_p = self.dataToScreen(tick);
                 tick_p.x -= tick_str_size.w + pad;
@@ -224,7 +224,7 @@ pub fn install(self: *PlotWidget) !void {
                 //tick_p.y -= tick_str_size.h / 2;
                 const tick_rs: RectScale = .{ .r = Rect.fromPoint(tick_p).toSize(tick_str_size), .s = self.data_rs.s };
 
-                try dvui.renderText(.{ .font = tick_font, .text = tick_str, .rs = tick_rs, .color = self.box.data().options.color(.text) });
+                try rui.renderText(.{ .font = tick_font, .text = tick_str, .rs = tick_rs, .color = self.box.data().options.color(.text) });
             }
         }
     }
@@ -235,7 +235,7 @@ pub fn install(self: *PlotWidget) !void {
         for (xticks) |m_xtick| {
             if (m_xtick) |xtick| {
                 const tick: Data = .{ .x = xtick, .y = self.y_axis.min orelse 0 };
-                const tick_str = try std.fmt.allocPrint(dvui.currentWindow().arena(), "{d}", .{xtick});
+                const tick_str = try std.fmt.allocPrint(rui.currentWindow().arena(), "{d}", .{xtick});
                 const tick_str_size = tick_font.textSize(tick_str).scale(self.data_rs.s);
                 var tick_p = self.dataToScreen(tick);
                 tick_p.x = @max(tick_p.x, self.data_rs.r.x);
@@ -244,23 +244,23 @@ pub fn install(self: *PlotWidget) !void {
                 tick_p.y += pad;
                 const tick_rs: RectScale = .{ .r = Rect.fromPoint(tick_p).toSize(tick_str_size), .s = self.data_rs.s };
 
-                try dvui.renderText(.{ .font = tick_font, .text = tick_str, .rs = tick_rs, .color = self.box.data().options.color(.text) });
+                try rui.renderText(.{ .font = tick_font, .text = tick_str, .rs = tick_rs, .color = self.box.data().options.color(.text) });
             }
         }
     }
 
-    self.old_clip = dvui.clip(self.data_rs.r);
+    self.old_clip = rui.clip(self.data_rs.r);
 }
 
 pub fn line(self: *PlotWidget) Line {
     return .{
         .plot = self,
-        .path = .init(dvui.currentWindow().arena()),
+        .path = .init(rui.currentWindow().arena()),
     };
 }
 
 pub fn deinit(self: *PlotWidget) void {
-    dvui.clipSet(self.old_clip);
+    rui.clipSet(self.old_clip);
 
     // maybe we got no data
     if (self.data_min.x == std.math.floatMax(f64)) {
@@ -280,32 +280,32 @@ pub fn deinit(self: *PlotWidget) void {
     if (self.init_options.y_axis == null or self.init_options.y_axis.?.max == null) {
         self.y_axis.max = self.data_max.y;
     }
-    dvui.dataSet(null, self.box.data().id, "_x_axis", self.x_axis.*);
-    dvui.dataSet(null, self.box.data().id, "_y_axis", self.y_axis.*);
+    rui.dataSet(null, self.box.data().id, "_x_axis", self.x_axis.*);
+    rui.dataSet(null, self.box.data().id, "_y_axis", self.y_axis.*);
 
     if (self.hover_data) |hd| {
         var p = self.box.data().contentRectScale().pointFromScreen(self.mouse_point.?);
-        const str = std.fmt.allocPrint(dvui.currentWindow().arena(), "{d}, {d}", .{ hd.x, hd.y }) catch "";
-        const size: Size = (dvui.Options{}).fontGet().textSize(str);
+        const str = std.fmt.allocPrint(rui.currentWindow().arena(), "{d}, {d}", .{ hd.x, hd.y }) catch "";
+        const size: Size = (rui.Options{}).fontGet().textSize(str);
         p.x -= size.w / 2;
-        const padding = dvui.LabelWidget.defaults.paddingGet();
+        const padding = rui.LabelWidget.defaults.paddingGet();
         p.y -= size.h + padding.y + padding.h + 8;
-        dvui.label(@src(), "{d}, {d}", .{ hd.x, hd.y }, .{ .rect = Rect.fromPoint(p), .background = true, .border = Rect.all(1), .margin = .{} }) catch {};
+        rui.label(@src(), "{d}, {d}", .{ hd.x, hd.y }, .{ .rect = Rect.fromPoint(p), .background = true, .border = Rect.all(1), .margin = .{} }) catch {};
     }
 
     self.box.deinit();
 }
 
-const Options = dvui.Options;
-const Point = dvui.Point;
-const Rect = dvui.Rect;
-const RectScale = dvui.RectScale;
-const Size = dvui.Size;
+const Options = rui.Options;
+const Point = rui.Point;
+const Rect = rui.Rect;
+const RectScale = rui.RectScale;
+const Size = rui.Size;
 
-const BoxWidget = dvui.BoxWidget;
+const BoxWidget = rui.BoxWidget;
 
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
 test {
     @import("std").testing.refAllDecls(@This());

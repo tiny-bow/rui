@@ -1,9 +1,9 @@
 const std = @import("std");
-const dvui = @import("../dvui.zig");
+const rui = @import("../rui.zig");
 
-const Options = dvui.Options;
-const Size = dvui.Size;
-const WidgetData = dvui.WidgetData;
+const Options = rui.Options;
+const Size = rui.Size;
+const WidgetData = rui.WidgetData;
 
 const IconWidget = @This();
 
@@ -21,11 +21,11 @@ pub fn init(src: std.builtin.SourceLocation, name: []const u8, tvg_bytes: []cons
     if (options.min_size_content) |msc| {
         // user gave us a min size, use it
         size = msc;
-        size.w = @max(size.w, dvui.iconWidth(name, tvg_bytes, size.h) catch size.w);
+        size.w = @max(size.w, rui.iconWidth(name, tvg_bytes, size.h) catch size.w);
     } else {
         // user didn't give us one, make it the height of text
         const h = options.fontGet().textHeight();
-        size = Size{ .w = dvui.iconWidth(name, tvg_bytes, h) catch h, .h = h };
+        size = Size{ .w = rui.iconWidth(name, tvg_bytes, h) catch h, .h = h };
     }
 
     self.wd = WidgetData.init(src, .{}, options.override(.{ .min_size_content = size }));
@@ -42,13 +42,13 @@ pub fn data(self: *IconWidget) *WidgetData {
     return &self.wd;
 }
 
-pub fn matchEvent(self: *IconWidget, e: *dvui.Event) bool {
-    return dvui.eventMatchSimple(e, &self.wd);
+pub fn matchEvent(self: *IconWidget, e: *rui.Event) bool {
+    return rui.eventMatchSimple(e, &self.wd);
 }
 
 pub fn draw(self: *IconWidget) !void {
     const rs = self.wd.parent.screenRectScale(self.wd.contentRect());
-    try dvui.renderIcon(self.name, self.tvg_bytes, rs, self.wd.options.rotationGet(), self.wd.options.color(.text));
+    try rui.renderIcon(self.name, self.tvg_bytes, rs, self.wd.options.rotationGet(), self.wd.options.color(.text));
 }
 
 pub fn deinit(self: *IconWidget) void {
